@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, varchar, decimal } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, varchar, decimal, boolean } from "drizzle-orm/pg-core"; // <-- Added boolean!
 
 // 1. USERS
 export const users = pgTable("users", {
@@ -57,21 +57,44 @@ export const cartItems = pgTable("cart_items", {
   priceAtTime: decimal("price_at_time", { precision: 10, scale: 2 }).notNull(),
 });
 
-// 7. ORDERS
+// 7. ORDERS (UPDATED FOR GUEST CHECKOUT)
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id), // <-- Removed .notNull() so guests can order!
+  isGuest: boolean("is_guest").default(false).notNull(), // <-- New: Flag to identify guest orders
+  customerName: varchar("customer_name", { length: 255 }), // <-- New: Store guest name
+  customerEmail: varchar("customer_email", { length: 255 }), // <-- New: Store guest email
+  customerPhone: varchar("customer_phone", { length: 50 }), // <-- New: Store guest phone
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(),
-  addressSnapshot: text("address_snapshot").notNull(), // Stores exact address at checkout time
+  addressSnapshot: text("address_snapshot").notNull(), 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // 8. ORDER ITEMS
+// 8. ORDER ITEMS (UPDATED to include the chosen size)
 export const orderItems = pgTable("order_items", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").references(() => orders.id).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
+  size: varchar("size", { length: 10 }), // <-- NEW: Store the specific size ordered!
   quantity: integer("quantity").notNull(),
   priceAtPurchase: decimal("price_at_purchase", { precision: 10, scale: 2 }).notNull(),
+});
+
+// 9. CONTACTS (NEW TABLE FOR CONTACT US PAGE)
+export const contacts = pgTable("contacts", {
+  id: serial("id").primaryKey(),
+  fullName: varchar("full_name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 255 }),
+  message: text("message").notNull(),
+  status: varchar("status", { length: 50 }).default("Unread").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const productSizes = pgTable("product_sizes", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  size: varchar("size", { length: 10 }).notNull(), // e.g., 'S', 'M', 'L', 'XL'
+  stock: integer("stock").default(0).notNull(),
 });

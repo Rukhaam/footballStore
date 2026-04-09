@@ -4,13 +4,12 @@ import dotenv from 'dotenv';
 import './config/db.js'; 
 import { requireAuth } from './middlewares/authmiddleware.js'
 
-// Routes 
 import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js'
 import cartRoutes from './routes/cartRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
-
-import { apiLimiter } from './middlewares/rateLimiter.js'; // <-- Import the general limiter
+import contactRoutes from './routes/contactRoutes.js';
+import { apiLimiter } from './middlewares/rateLimiter.js'; 
 
 dotenv.config();
 
@@ -26,7 +25,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/store', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes)
-
+app.use('/api/contact', contactRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
