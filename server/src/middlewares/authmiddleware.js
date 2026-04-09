@@ -1,28 +1,39 @@
-import jwt from 'jsonwebtoken';
+import { createClient } from '@supabase/supabase-js';
 
-export const requireAuth = (req, res, next) => {
-  // 1. Get the token from the request headers
-  const authHeader = req.headers.authorization;
+// Initialize the Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: No token provided' });
-  }
-
-  // Extract the actual token string
-  const token = authHeader.split(' ')[1];
-
+export const requireAuth = async (req, res, next) => {
   try {
-    // 2. Verify the token using your Supabase JWT Secret
-    const decoded = jwt.verify(token, process.env.SUPABASE_JWT_SECRET);
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized: No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Let Supabase handle the complex ES256 decryption!
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data.user) {
+      console.error("🔴 Supabase Auth Rejected:", error?.message);
+      return res.status(403).json({ error: 'Forbidden: Invalid or expired token' });
+    }
+
+    // Success! Attach the user info to the request
     req.user = {
-      supabaseId: decoded.sub,
-      email: decoded.email,
-      role: decoded.role 
+      supabaseId: data.user.id,
+      email: data.user.email,
+      role: data.user.role 
     };
 
-    // 4. Move on to the actual route handler
     next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Forbidden: Invalid or expired token' });
+  } catch (err) {
+    console.error("🔴 Critical Auth Error:", err.message);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 };

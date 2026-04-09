@@ -12,7 +12,6 @@ export const updateUserProfileDTO = z.object({
 export const addToCartDTO = z.object({
   productId: z.number().int().positive("Product ID must be a valid positive integer"),
   quantity: z.number().int().min(1, "Quantity must be at least 1"),
-  price: z.number().positive("Price must be a positive number"),
 });
 
 // DTO for checkout

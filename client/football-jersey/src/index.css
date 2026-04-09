@@ -1,1 +1,88 @@
 @import "tailwindcss";
+
+@theme {
+  /* --- 1. THE KINETIC COLOR PALETTE --- */
+  --color-brand-primary: #c2f35b;
+  --color-brand-dim: #a7d641;
+  --color-brand-on-primary: #141f00;
+
+  --color-surface-base: #131313;
+  --color-surface-deep: #0e0e0e;
+  --color-surface-low: #1e1e1e; /* Slightly elevated from base */
+  --color-surface-high: #2a2a2a; /* For input fields */
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #c7c6c5;
+
+  /* --- 2. TYPOGRAPHY --- */
+  --font-jakarta: "Plus Jakarta Sans", sans-serif;
+  --font-inter: "Inter", sans-serif;
+
+  /* --- 3. CORNER RADII (Athletic Precision) --- */
+  --radius-sharp: 2px;
+  --radius-button: 4px;
+  --radius-large: 8px;
+  --animate-slide-in: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+}
+
+/* --- 4. CUSTOM COMPONENTS & BEHAVIORS --- */
+@layer utilities {
+  
+  /* Global Background Base */
+  body {
+    @apply bg-surface-base text-text-primary font-jakarta antialiased;
+  }
+
+  /* Typography Rules */
+  .kinetic-heading {
+    @apply font-jakarta font-bold tracking-[-0.02em] text-text-primary;
+  }
+  
+  .kinetic-body {
+    @apply font-jakarta text-text-secondary leading-[1.6];
+  }
+
+  /* Glassmorphism (The "Fog of War") */
+  .glass-panel {
+    @apply bg-surface-base/60 backdrop-blur-[32px] border border-white/15;
+  }
+
+  /* Ambient Shadows */
+  .ambient-shadow {
+    @apply shadow-[0_0_24px_rgba(255,255,255,0.04)];
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply bg-gradient-to-br from-brand-primary to-brand-dim text-brand-on-primary font-bold rounded-button px-6 py-3 
+    shadow-[0_0_15px_rgba(194,243,91,0.1)] hover:shadow-[0_0_25px_rgba(194,243,91,0.3)] 
+    transition-all duration-300 scale-100 hover:scale-[0.98] active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent border border-white/20 text-white rounded-button px-6 py-3 
+    hover:bg-white/5 transition-colors duration-300;
+  }
+
+  /* Inputs */
+  .kinetic-input {
+    @apply bg-surface-high text-white rounded-button px-4 py-3 outline-none border border-transparent 
+    focus:border-brand-primary focus:border-2 transition-all font-inter text-sm;
+  }
+
+  /* Chips */
+  .athletic-chip {
+    @apply rounded-full px-4 py-2 text-sm font-inter transition-colors duration-200 cursor-pointer;
+  }
+  .athletic-chip-unselected {
+    @apply bg-surface-high text-text-secondary hover:text-white;
+  }
+  .athletic-chip-selected {
+    @apply bg-brand-primary text-brand-on-primary font-semibold;
+  }
+}

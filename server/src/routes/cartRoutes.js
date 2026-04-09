@@ -8,8 +8,6 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.get('/', getCart);
-
-// Added DTO Validation here
 router.post('/add', validateDTO(addToCartDTO), addToCart);
 
 export default router;
