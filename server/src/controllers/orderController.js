@@ -22,7 +22,18 @@ export const checkout = async (req, res) => {
     let cartId = null;
 
     if (!isGuest && req.user?.supabaseId) {
-      const userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
+      let userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
+      
+      // Auto-healing missing OAuth user during checkout
+      if (userResult.length === 0) {
+        console.log("Auto-healing missing OAuth user during checkout...");
+        userResult = await db.insert(users).values({
+          supabaseId: req.user.supabaseId,
+          email: req.user.email || 'oauth@kineticarena.com',
+          userName: 'Kinetic Athlete'
+        }).returning();
+      }
+
       if (userResult.length > 0) {
         userId = userResult[0].id;
         const userCart = await db.select().from(cart).where(eq(cart.userId, userId));
@@ -38,7 +49,7 @@ export const checkout = async (req, res) => {
     const shipping = subtotalAmount > 100 ? 0 : 99.00;
     const cleanTotal = (Math.round((subtotalAmount + shipping) * 100) / 100).toFixed(2);
 
-    // 1. Create DB Transaction (Status defaults to 'pending')
+    // 1. Create DB Transaction
     const result = await db.transaction(async (tx) => {
       const [newOrder] = await tx.insert(orders).values({
         userId, isGuest,
@@ -66,21 +77,19 @@ export const checkout = async (req, res) => {
     });
 
     // 2. Create Razorpay Order
-    // NOTE: Razorpay expects the amount in the smallest currency unit (cents or paise)
     const options = {
       amount: Math.round(parseFloat(cleanTotal) * 100), 
-      currency: "INR", // Change to "INR" if your Razorpay account doesn't have international payments enabled!
+      currency: "INR", 
       receipt: `receipt_order_${result.id}`
     };
 
     const razorpayOrder = await razorpay.orders.create(options);
 
-    // 3. Send both DB Order ID and Razorpay Order details to frontend
     res.status(200).json({ 
       message: "Order initiated", 
       dbOrderId: result.id,
       razorpayOrder,
-      keyId: process.env.RAZORPAY_KEY_ID // Safe to send public key to frontend
+      keyId: process.env.RAZORPAY_KEY_ID 
     });
 
   } catch (error) {
@@ -89,12 +98,10 @@ export const checkout = async (req, res) => {
   }
 };
 
-// NEW: Verify Payment Signature
 export const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, dbOrderId } = req.body;
 
-    // Create the expected signature
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSign = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -102,13 +109,10 @@ export const verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (razorpay_signature === expectedSign) {
-      // 1. Fetch order to get the amount
       const orderInfo = await db.select().from(orders).where(eq(orders.id, dbOrderId));
       
-      // 2. Update Order Status to 'paid'
       await db.update(orders).set({ status: 'paid' }).where(eq(orders.id, dbOrderId));
 
-      // 3. Log the successful payment into our new payments table
       await db.insert(payments).values({
         orderId: dbOrderId,
         razorpayPaymentId: razorpay_payment_id,
@@ -126,17 +130,24 @@ export const verifyPayment = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 export const getMyOrders = async (req, res) => {
   try {
-    // 1. Get the internal user ID
-    const userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
-    if (!userResult.length) return res.status(404).json({ error: "User not found" });
+    let userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
+    
+    if (userResult.length === 0) {
+      console.log("Auto-healing missing OAuth user during order fetch...");
+      userResult = await db.insert(users).values({
+        supabaseId: req.user.supabaseId,
+        email: req.user.email || 'oauth@kineticarena.com',
+        userName: 'Kinetic Athlete'
+      }).returning();
+    }
+
     const internalUserId = userResult[0].id;
 
-    // 2. Fetch all orders for this user
     const myOrders = await db.select().from(orders).where(eq(orders.userId, internalUserId));
 
-    // 3. For each order, fetch the individual items and product details
     const formattedOrders = await Promise.all(myOrders.map(async (order) => {
       const items = await db.select({
         quantity: orderItems.quantity,
@@ -152,7 +163,6 @@ export const getMyOrders = async (req, res) => {
       return { ...order, items };
     }));
 
-    // 4. Sort so the newest orders appear at the top
     formattedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.status(200).json(formattedOrders);
