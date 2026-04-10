@@ -37,6 +37,11 @@ app.get('/api/profile', requireAuth, (req, res) => {
   res.json({ message: 'Protected route', user: req.user });
 });
 
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
+
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Arena Server running on port ${PORT}`);
+  });
+}
+export default app;
