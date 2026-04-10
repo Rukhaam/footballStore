@@ -111,7 +111,7 @@ const ProductDetailsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
           
           {/* Left Column: Image */}
-          <div className="relative aspect-[4/5] bg-surface-low rounded-2xl flex items-center justify-center p-10 overflow-hidden ambient-shadow z-10 sticky top-24 h-max">
+          <div className="relative aspect-[4/5] bg-surface-low rounded-2xl flex items-center justify-center p-10 overflow-hidden ambient-shadow z-10 top-24 h-max">
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-brand-primary/10 opacity-50"></div>
             <img 
               src={product.productImageUrl || 'https://via.placeholder.com/600x800?text=Jersey+Image'} 
@@ -122,7 +122,7 @@ const ProductDetailsPage = () => {
 
           {/* Right Column: Details */}
           <div className="flex flex-col justify-center relative z-20">
-            <div className="mb-8 border-b border-white/10 pb-8">
+            <div className="mb-8 border-b border-white/10 pb-8 mt-20">
               <h1 className="kinetic-heading text-4xl md:text-5xl lg:text-6xl leading-tight mb-4 uppercase text-white">
                 {product.productName}
               </h1>
