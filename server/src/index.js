@@ -14,25 +14,27 @@ import { apiLimiter } from './middlewares/rateLimiter.js';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 5000;
 
-app.use(cors());
+app.set('trust proxy', 1);
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173', 
+  credentials: true, 
+}));
+
 app.use(express.json());
 
-
-app.use('/api/', apiLimiter);
+// --- ROUTES ---
+//app.use('/api/', apiLimiter);
 app.use('/api/user', userRoutes);
 app.use('/api/store', productRoutes);
 app.use('/api/cart', cartRoutes);
-app.use('/api/orders', orderRoutes)
+app.use('/api/orders', orderRoutes);
 app.use('/api/contact', contactRoutes);
 
-// Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running, Database connected' });
 });
 
-// Protected Route Example
 app.get('/api/profile', requireAuth, (req, res) => {
   res.json({ message: 'Protected route', user: req.user });
 });
@@ -44,4 +46,6 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Arena Server running on port ${PORT}`);
   });
 }
+
+
 export default app;
