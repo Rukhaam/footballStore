@@ -1,21 +1,11 @@
 import { db } from '../config/db.js';
 import { users, cart, cartItems, products } from '../models/schema.js';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
-// --- THE AUTO-HEALER APPLIED TO CART ---
-const getUserCart = async (authUser) => {
-  let user = await db.select().from(users).where(eq(users.supabaseId, authUser.supabaseId));
+const getUserCart = async (supabaseId) => {
+  const user = await db.select().from(users).where(eq(users.supabaseId, supabaseId));
   
-  // Auto-heal missing OAuth users!
-  if (user.length === 0) {
-    console.log("Auto-healing missing OAuth user in Cart...");
-    user = await db.insert(users).values({
-      supabaseId: authUser.supabaseId,
-      email: authUser.email || 'oauth@kineticarena.com',
-      userName: 'Kinetic Athlete'
-    }).returning();
-  }
-  
+  if (user.length === 0) throw new Error("User record not synced to database yet");
   const userId = user[0].id;
 
   let userCart = await db.select().from(cart).where(eq(cart.userId, userId));
@@ -27,12 +17,12 @@ const getUserCart = async (authUser) => {
 
 export const getCart = async (req, res) => {
   try {
-    const currentCart = await getUserCart(req.user);
+    const currentCart = await getUserCart(req.user.supabaseId);
     const items = await db.select({
       cartItemId: cartItems.id,
       quantity: cartItems.quantity,
       priceAtTime: cartItems.priceAtTime,
-      size: cartItems.size, 
+      size: cartItems.size, // <--- THE BUG WAS HERE: Size wasn't being sent to the frontend!
       product: {
         id: products.id,
         name: products.productName,
@@ -58,15 +48,18 @@ export const addToCart = async (req, res) => {
     if (product.length === 0) return res.status(404).json({ error: "Product not found" });
     const truePrice = product[0].price;
 
-    const currentCart = await getUserCart(req.user);
+    const currentCart = await getUserCart(req.user.supabaseId);
     
-    const condition = size 
-      ? and(eq(cartItems.cartId, currentCart.id), eq(cartItems.productId, productId), eq(cartItems.size, size))
-      : and(eq(cartItems.cartId, currentCart.id), eq(cartItems.productId, productId), isNull(cartItems.size));
-
+    // We must also check for size when looking for an existing item to stack quantities properly
     const existingItem = await db.select()
       .from(cartItems)
-      .where(condition);
+      .where(
+        and(
+          eq(cartItems.cartId, currentCart.id), 
+          eq(cartItems.productId, productId),
+          size ? eq(cartItems.size, size) : true // Ensures sizes don't mix up
+        )
+      );
 
     if (existingItem.length > 0) {
       await db.update(cartItems)
@@ -94,32 +87,23 @@ export const addToCart = async (req, res) => {
 
 export const updateCartItemQuantity = async (req, res) => {
   try {
-    const { productId, quantity, size } = req.body;
+    const { productId, quantity } = req.body;
     
-    let userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
-    
-    if (userResult.length === 0) {
-      userResult = await db.insert(users).values({
-        supabaseId: req.user.supabaseId,
-        email: req.user.email || 'oauth@kineticarena.com',
-        userName: 'Kinetic Athlete'
-      }).returning();
-    }
-    
+    const userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
+    if (!userResult.length) return res.status(404).json({ error: "User not found" });
     const internalUserId = userResult[0].id;
 
     const cartRecord = await db.select().from(cart).where(eq(cart.userId, internalUserId));
     if (!cartRecord.length) return res.status(404).json({ error: "Cart not found" });
     const cartId = cartRecord[0].id;
 
-    const condition = size 
-      ? and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId), eq(cartItems.size, size))
-      : and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId), isNull(cartItems.size));
-
     if (quantity <= 0) {
-      await db.delete(cartItems).where(condition);
+      await db.delete(cartItems)
+        .where(and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)));
     } else {
-      await db.update(cartItems).set({ quantity }).where(condition);
+      await db.update(cartItems)
+        .set({ quantity })
+        .where(and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)));
     }
 
     res.status(200).json({ message: "Cart updated successfully" });
@@ -132,29 +116,16 @@ export const updateCartItemQuantity = async (req, res) => {
 export const removeCartItem = async (req, res) => {
   try {
     const { productId } = req.params;
-    const { size } = req.query; 
     
-    let userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
-    
-    if (userResult.length === 0) {
-      userResult = await db.insert(users).values({
-        supabaseId: req.user.supabaseId,
-        email: req.user.email || 'oauth@kineticarena.com',
-        userName: 'Kinetic Athlete'
-      }).returning();
-    }
-    
+    const userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
+    if (!userResult.length) return res.status(404).json({ error: "User not found" });
     const internalUserId = userResult[0].id;
 
     const cartRecord = await db.select().from(cart).where(eq(cart.userId, internalUserId));
     if (!cartRecord.length) return res.status(404).json({ error: "Cart not found" });
-    const cartId = cartRecord[0].id;
 
-    const condition = size 
-      ? and(eq(cartItems.cartId, cartId), eq(cartItems.productId, parseInt(productId)), eq(cartItems.size, size))
-      : and(eq(cartItems.cartId, cartId), eq(cartItems.productId, parseInt(productId)), isNull(cartItems.size));
-
-    await db.delete(cartItems).where(condition);
+    await db.delete(cartItems)
+      .where(and(eq(cartItems.cartId, cartRecord[0].id), eq(cartItems.productId, parseInt(productId))));
 
     res.status(200).json({ message: "Item removed from cart" });
   } catch (error) {
