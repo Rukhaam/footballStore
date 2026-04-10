@@ -17,6 +17,7 @@ export const users = pgTable("users", {
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   categoryName: varchar("category_name", { length: 100 }).notNull().unique(),
+  categoryUrl : text("category_url")
 });
 
 // 3. COLLECTIONS (New Table! e.g., Real Madrid, Man United)
@@ -49,10 +50,12 @@ export const cart = pgTable("cart", {
 });
 
 // 6. CART ITEMS
+// 6. CART ITEMS
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),
   cartId: integer("cart_id").references(() => cart.id).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
+  size: varchar("size", { length: 10 }), // <-- ADD THIS LINE!
   quantity: integer("quantity").notNull(),
   priceAtTime: decimal("price_at_time", { precision: 10, scale: 2 }).notNull(),
 });
@@ -97,4 +100,16 @@ export const productSizes = pgTable("product_sizes", {
   productId: integer("product_id").references(() => products.id).notNull(),
   size: varchar("size", { length: 10 }).notNull(), // e.g., 'S', 'M', 'L', 'XL'
   stock: integer("stock").default(0).notNull(),
+});
+
+// 10. PAYMENTS (NEW TABLE)
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  razorpayPaymentId: varchar("razorpay_payment_id", { length: 255 }).notNull(),
+  razorpayOrderId: varchar("razorpay_order_id", { length: 255 }).notNull(),
+  razorpaySignature: varchar("razorpay_signature", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status", { length: 50 }).default("successful").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });

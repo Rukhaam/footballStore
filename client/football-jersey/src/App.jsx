@@ -1,43 +1,59 @@
-// client/src/App.jsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { supabase } from './services/supabaseClient';
-import { setUser } from './features/authSlice';
- import CartDrawer from './components/cartDrawer';
-import AuthPage from './pages/authPage';
-import HomePage from './pages/homePage'; // <-- Import the new Homepage
+import {setUser , logout } from './features/authSlice';
+import {supabase} from './services/supabaseClient';
 
+
+import HomePage from './pages/homePage';
+import AuthPage from './pages/authPage';
+import ProductDetailsPage from './pages/proudctDetailPage';
+import Layout from './components/layout';
+import CategoryPage from './pages/categoryPage';
+import CollectionPage from './pages/collectionPage';
+import CheckoutPage from './pages/checkoutPage';
+import ContactPage from './pages/contactPage';
+import OrdersPage from './pages/ordersPage';
+import ForgotPasswordPage from './pages/forgotPasswordPage';
+import UpdatePasswordPage from './pages/updatePasswordPage';
 function App() {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      dispatch(setUser(session?.user || null));
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        dispatch(setUser(session?.user || null));
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        dispatch(setUser({
+          user: session.user,
+          token: session.access_token,
+        }));
       }
-    );
-
-    return () => subscription.unsubscribe();
+    };
+    checkSession();
   }, [dispatch]);
 
   return (
     <Router>
-      <CartDrawer />
       <Routes>
-        {/* The Homepage is now accessible to everyone (no auth wrapper needed for browsing!) */}
-        <Route path="/" element={<HomePage />} />
-        
-        {/* Auth Page */}
+        <Route element={<Layout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/product/:id" element={<ProductDetailsPage />} />
+          <Route path="/category/:categoryId" element={<CategoryPage />} />
+          <Route path="/collection/:id" element={<CollectionPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          
+          <Route path="/orders" element={<OrdersPage />} />
+        </Route>
+
+        {/* --- ROUTES WITHOUT NAVBAR & FOOTER --- */}
         <Route 
           path="/auth" 
           element={!isAuthenticated ? <AuthPage /> : <Navigate to="/" />} 
         />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/update-password" element={<UpdatePasswordPage />} />
       </Routes>
     </Router>
   );

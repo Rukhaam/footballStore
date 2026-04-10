@@ -1,0 +1,126 @@
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../services/api';
+import ProductCard from '../components/productCard';
+
+const CategoryPage = () => {
+  const { categoryId } = useParams();
+  const [data, setData] = useState({ category: null, products: [] });
+  const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalItems: 0 });
+  const [loading, setLoading] = useState(true);
+
+  // If the user clicks a different category in the Navbar, reset to Page 1
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  }, [categoryId]);
+
+  // Fetch data whenever the Category ID OR the Current Page changes
+  useEffect(() => {
+    const fetchCategoryData = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get(`/store/category/${categoryId}?page=${pagination.currentPage}&limit=15`);
+        setData({
+          category: response.data.category,
+          products: response.data.products
+        });
+        setPagination(response.data.pagination);
+        
+        // Smoothly scroll back to the top of the grid when the page changes
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (error) {
+        console.error("Failed to load category data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategoryData();
+  }, [categoryId, pagination.currentPage]);
+
+  const handleNextPage = () => {
+    if (pagination.currentPage < pagination.totalPages) {
+      setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }));
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (pagination.currentPage > 1) {
+      setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }));
+    }
+  };
+
+  if (loading && !data.category) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-12 h-12 border-4 border-surface-high border-t-brand-primary rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!data.category) {
+    return <div className="text-center text-white mt-20 text-2xl">Category not found</div>;
+  }
+
+  return (
+    <div className="px-6 pt-12 pb-24 w-full max-w-7xl mx-auto">
+      
+      {/* Category Header */}
+      <div className="mb-12 border-b border-white/10 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="kinetic-heading text-4xl md:text-5xl uppercase text-white mb-2">
+            {data.category.categoryName} Gear
+          </h1>
+          <p className="text-text-secondary font-inter">
+            Explore our collection of {data.category.categoryName} products.
+          </p>
+        </div>
+        {/* Total Items Counter */}
+        <div className="text-sm font-inter text-text-secondary font-bold uppercase tracking-widest bg-surface-low px-4 py-2 rounded-lg border border-white/5">
+          {pagination.totalItems} Items Found
+        </div>
+      </div>
+
+      {/* Product Grid */}
+      {data.products.length === 0 ? (
+        <div className="text-center text-text-secondary font-inter py-20 bg-surface-low rounded-xl border border-white/5">
+          No products found in this category yet. Check back soon!
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[50vh]">
+          {data.products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
+
+      {/* --- PAGINATION CONTROLS --- */}
+      {pagination.totalPages > 1 && (
+        <div className="mt-16 pt-8 border-t border-white/10 flex items-center justify-center gap-6">
+          <button 
+            onClick={handlePrevPage} 
+            disabled={pagination.currentPage === 1 || loading}
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-surface-low border border-white/10 text-white hover:bg-brand-primary hover:text-black hover:border-brand-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-surface-low disabled:hover:text-white"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          
+          <div className="font-inter font-bold text-white text-lg flex items-center gap-2">
+            Page <span className="text-brand-primary">{pagination.currentPage}</span> of {pagination.totalPages}
+          </div>
+
+          <button 
+            onClick={handleNextPage} 
+            disabled={pagination.currentPage === pagination.totalPages || loading}
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-surface-low border border-white/10 text-white hover:bg-brand-primary hover:text-black hover:border-brand-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-surface-low disabled:hover:text-white"
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default CategoryPage;

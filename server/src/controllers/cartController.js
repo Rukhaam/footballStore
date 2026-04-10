@@ -5,7 +5,6 @@ import { eq, and } from 'drizzle-orm';
 const getUserCart = async (supabaseId) => {
   const user = await db.select().from(users).where(eq(users.supabaseId, supabaseId));
   
-  // Guard clause to prevent crashes
   if (user.length === 0) throw new Error("User record not synced to database yet");
   const userId = user[0].id;
 
@@ -23,6 +22,7 @@ export const getCart = async (req, res) => {
       cartItemId: cartItems.id,
       quantity: cartItems.quantity,
       priceAtTime: cartItems.priceAtTime,
+      size: cartItems.size, // <--- THE BUG WAS HERE: Size wasn't being sent to the frontend!
       product: {
         id: products.id,
         name: products.productName,
@@ -42,7 +42,7 @@ export const getCart = async (req, res) => {
 
 export const addToCart = async (req, res) => {
   try {
-    const { productId, quantity } = req.body; 
+    const { productId, quantity, size } = req.body; 
 
     const product = await db.select().from(products).where(eq(products.id, productId));
     if (product.length === 0) return res.status(404).json({ error: "Product not found" });
@@ -50,23 +50,31 @@ export const addToCart = async (req, res) => {
 
     const currentCart = await getUserCart(req.user.supabaseId);
     
+    // We must also check for size when looking for an existing item to stack quantities properly
     const existingItem = await db.select()
       .from(cartItems)
-      .where(and(eq(cartItems.cartId, currentCart.id), eq(cartItems.productId, productId)));
+      .where(
+        and(
+          eq(cartItems.cartId, currentCart.id), 
+          eq(cartItems.productId, productId),
+          size ? eq(cartItems.size, size) : true // Ensures sizes don't mix up
+        )
+      );
 
     if (existingItem.length > 0) {
       await db.update(cartItems)
         .set({ 
           quantity: existingItem[0].quantity + quantity,
-          priceAtTime: truePrice // Update to latest price just in case it changed
+          priceAtTime: truePrice 
         })
         .where(eq(cartItems.id, existingItem[0].id));
     } else {
       await db.insert(cartItems).values({
         cartId: currentCart.id,
         productId,
+        size: size || null,
         quantity,
-        priceAtTime: truePrice // Secure price insertion
+        priceAtTime: truePrice 
       });
     }
 
@@ -76,24 +84,19 @@ export const addToCart = async (req, res) => {
     res.status(500).json({ error: error.message || "Failed to add to cart" });
   }
 };
-// Add 'and' to your imports at the top if it isn't there:
-// import { eq, and } from 'drizzle-orm';
 
 export const updateCartItemQuantity = async (req, res) => {
   try {
     const { productId, quantity } = req.body;
     
-    // 1. Get the internal integer ID for the user
     const userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
     if (!userResult.length) return res.status(404).json({ error: "User not found" });
     const internalUserId = userResult[0].id;
 
-    // 2. Get their cart
     const cartRecord = await db.select().from(cart).where(eq(cart.userId, internalUserId));
     if (!cartRecord.length) return res.status(404).json({ error: "Cart not found" });
     const cartId = cartRecord[0].id;
 
-    // 3. Update or Delete based on quantity
     if (quantity <= 0) {
       await db.delete(cartItems)
         .where(and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)));

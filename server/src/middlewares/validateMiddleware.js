@@ -17,17 +17,3 @@ export const validateDTO = (schema) => {
     }
   };
 };
-
-export const checkoutSchema = z.object({
-  addressSnapshot: z.string(),
-  customerDetails: z.object({
-    fullName: z.string(),
-    email: z.string().email(),
-    phone: z.string(),
-    address: z.string(),
-    city: z.string(),
-    postalCode: z.string()
-  }).optional().nullable(), // Added nullable just to be ultra-safe
-  cartItems: z.array(z.any()), 
-  isGuest: z.boolean()
-}).passthrough();

@@ -28,6 +28,7 @@
     from { transform: translateX(100%); }
     to { transform: translateX(0); }
   }
+  
 }
 
 /* --- 4. CUSTOM COMPONENTS & BEHAVIORS --- */
@@ -85,4 +86,19 @@
   .athletic-chip-selected {
     @apply bg-brand-primary text-brand-on-primary font-semibold;
   }
+}
+/* --- CUSTOM ANIMATIONS --- */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: 200%;
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
 }

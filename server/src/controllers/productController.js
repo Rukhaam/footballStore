@@ -103,3 +103,24 @@ export const getProductsByCategory = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch category products" });
   }
 };
+
+export const getCollectionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const collectionData = await db.select().from(collections).where(eq(collections.id, id));
+    
+    if (collectionData.length === 0) {
+      return res.status(404).json({ error: "Collection not found" });
+    }
+
+    const collectionProducts = await db.select().from(products).where(eq(products.collectionId, id));
+
+    res.status(200).json({
+      collection: collectionData[0],
+      products: collectionProducts
+    });
+  } catch (error) {
+    console.error("Failed to fetch collection details:", error);
+    res.status(500).json({ error: "Failed to fetch collection details" });
+  }
+};
