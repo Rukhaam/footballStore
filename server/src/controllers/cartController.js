@@ -1,6 +1,6 @@
 import { db } from '../config/db.js';
 import { users, cart, cartItems, products } from '../models/schema.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 
 const getUserCart = async (supabaseId) => {
   const user = await db.select().from(users).where(eq(users.supabaseId, supabaseId));
@@ -22,7 +22,7 @@ export const getCart = async (req, res) => {
       cartItemId: cartItems.id,
       quantity: cartItems.quantity,
       priceAtTime: cartItems.priceAtTime,
-      size: cartItems.size, // <--- THE BUG WAS HERE: Size wasn't being sent to the frontend!
+      size: cartItems.size, // Size is correctly mapped here
       product: {
         id: products.id,
         name: products.productName,
@@ -50,16 +50,14 @@ export const addToCart = async (req, res) => {
 
     const currentCart = await getUserCart(req.user.supabaseId);
     
-    // We must also check for size when looking for an existing item to stack quantities properly
+    // Strictly match both productId AND size to prevent variant merging
+    const condition = size 
+      ? and(eq(cartItems.cartId, currentCart.id), eq(cartItems.productId, productId), eq(cartItems.size, size))
+      : and(eq(cartItems.cartId, currentCart.id), eq(cartItems.productId, productId), isNull(cartItems.size));
+
     const existingItem = await db.select()
       .from(cartItems)
-      .where(
-        and(
-          eq(cartItems.cartId, currentCart.id), 
-          eq(cartItems.productId, productId),
-          size ? eq(cartItems.size, size) : true // Ensures sizes don't mix up
-        )
-      );
+      .where(condition);
 
     if (existingItem.length > 0) {
       await db.update(cartItems)
@@ -87,7 +85,8 @@ export const addToCart = async (req, res) => {
 
 export const updateCartItemQuantity = async (req, res) => {
   try {
-    const { productId, quantity } = req.body;
+    // We now extract size from the request body
+    const { productId, quantity, size } = req.body;
     
     const userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
     if (!userResult.length) return res.status(404).json({ error: "User not found" });
@@ -97,13 +96,15 @@ export const updateCartItemQuantity = async (req, res) => {
     if (!cartRecord.length) return res.status(404).json({ error: "Cart not found" });
     const cartId = cartRecord[0].id;
 
+    // Target the specific variant
+    const condition = size 
+      ? and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId), eq(cartItems.size, size))
+      : and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId), isNull(cartItems.size));
+
     if (quantity <= 0) {
-      await db.delete(cartItems)
-        .where(and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)));
+      await db.delete(cartItems).where(condition);
     } else {
-      await db.update(cartItems)
-        .set({ quantity })
-        .where(and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)));
+      await db.update(cartItems).set({ quantity }).where(condition);
     }
 
     res.status(200).json({ message: "Cart updated successfully" });
@@ -116,6 +117,8 @@ export const updateCartItemQuantity = async (req, res) => {
 export const removeCartItem = async (req, res) => {
   try {
     const { productId } = req.params;
+    // We expect the size to be passed via query string (e.g. /api/cart/3?size=L)
+    const { size } = req.query; 
     
     const userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
     if (!userResult.length) return res.status(404).json({ error: "User not found" });
@@ -123,9 +126,14 @@ export const removeCartItem = async (req, res) => {
 
     const cartRecord = await db.select().from(cart).where(eq(cart.userId, internalUserId));
     if (!cartRecord.length) return res.status(404).json({ error: "Cart not found" });
+    const cartId = cartRecord[0].id;
 
-    await db.delete(cartItems)
-      .where(and(eq(cartItems.cartId, cartRecord[0].id), eq(cartItems.productId, parseInt(productId))));
+    // Only delete the specific variant size
+    const condition = size 
+      ? and(eq(cartItems.cartId, cartId), eq(cartItems.productId, parseInt(productId)), eq(cartItems.size, size))
+      : and(eq(cartItems.cartId, cartId), eq(cartItems.productId, parseInt(productId)), isNull(cartItems.size));
+
+    await db.delete(cartItems).where(condition);
 
     res.status(200).json({ message: "Item removed from cart" });
   } catch (error) {
