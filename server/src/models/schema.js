@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, varchar, decimal, boolean } from "drizzle-orm/pg-core"; 
+import { pgTable, serial, text, integer, timestamp, varchar, decimal, boolean, jsonb } from "drizzle-orm/pg-core"; 
 
 // 1. USERS
 export const users = pgTable("users", {
@@ -29,16 +29,18 @@ export const collections = pgTable("collections", {
 });
 
 // 4. PRODUCTS (Jerseys)
+// 4. PRODUCTS (Jerseys)
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   productName: varchar("product_name", { length: 255 }).notNull(),
   description: text("description"),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(), // The CURRENT selling price
-  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // <-- NEW: The price before the sale!
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(), 
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), 
   stock: integer("stock").default(0).notNull(),
   categoryId: integer("category_id").references(() => categories.id),
   collectionId: integer("collection_id").references(() => collections.id), 
   productImageUrl: text("product_image_url"),
+  gallery: jsonb("gallery").default([]), 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

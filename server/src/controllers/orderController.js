@@ -1,9 +1,8 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { db } from '../config/db.js';
-// 1. Import promoCodes table
 import { users, cart, cartItems, orders, orderItems, products, productSizes, payments, promoCodes } from '../models/schema.js';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray, ne } from 'drizzle-orm'; // <-- Added 'ne' here
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -12,12 +11,9 @@ const razorpay = new Razorpay({
 
 export const checkout = async (req, res) => {
   try {
-    // 2. Extract promoCode from the request payload
     const { addressSnapshot, customerDetails, cartItems: frontendItems, isGuest, promoCode } = req.body;
     
-    if (!frontendItems || frontendItems.length === 0) {
-      return res.status(400).json({ error: "Cart is empty" });
-    }
+    if (!frontendItems || frontendItems.length === 0) return res.status(400).json({ error: "Cart is empty" });
 
     let userId = null;
     let cartId = null;
@@ -31,13 +27,22 @@ export const checkout = async (req, res) => {
       }
     }
 
-    // Calculate Base Subtotal
-    let subtotalAmount = 0;
-    frontendItems.forEach(item => { 
-      subtotalAmount += (parseFloat(item.priceAtTime) * item.quantity); 
-    });
-    let discountAmount = 0;
+    const productIds = frontendItems.map(item => item.product.id);
+    const trueProducts = await db.select().from(products).where(inArray(products.id, productIds));
 
+    const truePriceMap = {};
+    trueProducts.forEach(p => { truePriceMap[p.id] = parseFloat(p.price); });
+
+    let subtotalAmount = 0;
+    for (let item of frontendItems) {
+      const truePrice = truePriceMap[item.product.id];
+      if (truePrice === undefined) return res.status(400).json({ error: `Product ID ${item.product.id} does not exist.` });
+      
+      subtotalAmount += (truePrice * item.quantity); 
+      item.priceAtTime = truePrice; 
+    }
+
+    let discountAmount = 0;
     if (promoCode) {
       const upperCode = promoCode.toUpperCase();
       const [promo] = await db.select().from(promoCodes).where(eq(promoCodes.code, upperCode));
@@ -47,14 +52,10 @@ export const checkout = async (req, res) => {
       if (promo.expiresAt && new Date() > new Date(promo.expiresAt)) return res.status(400).json({ error: "This promo code has expired" });
       if (promo.maxUses !== null && promo.currentUses >= promo.maxUses) return res.status(400).json({ error: "This promo code has reached its usage limit" });
 
-      // --- THE FIX: Protect the final order math ---
       if (promo.discountType === 'fixed' && subtotalAmount <= parseFloat(promo.discountValue)) {
-        return res.status(400).json({ 
-          error: `Cart subtotal must be greater than ₹${parseFloat(promo.discountValue)} to use this code.` 
-        });
+        return res.status(400).json({ error: `Cart subtotal must be greater than ₹${parseFloat(promo.discountValue)} to use this code.` });
       }
 
-      // Calculate secure discount based on DB values
       if (promo.discountType === 'percentage') {
         discountAmount = subtotalAmount * (parseFloat(promo.discountValue) / 100);
       } else if (promo.discountType === 'fixed') {
@@ -63,12 +64,11 @@ export const checkout = async (req, res) => {
     }
     
     const shipping = subtotalAmount > 100 ? 0 : 99.00;
-
-    // 4. Ensure total never drops below 0 before adding shipping
     const totalBeforeShipping = Math.max(0, subtotalAmount - discountAmount);
     const cleanTotal = (Math.round((totalBeforeShipping + shipping) * 100) / 100).toFixed(2);
 
     const result = await db.transaction(async (tx) => {
+      // 1. Create the Pending Order
       const [newOrder] = await tx.insert(orders).values({
         userId, isGuest,
         customerName: customerDetails?.fullName || null,
@@ -77,28 +77,20 @@ export const checkout = async (req, res) => {
         totalAmount: cleanTotal, addressSnapshot, status: "pending"
       }).returning();
 
+      // 2. Insert Order Items (BUT DO NOT DEDUCT STOCK YET)
       for (const item of frontendItems) {
         await tx.insert(orderItems).values({
           orderId: newOrder.id, productId: item.product.id,
           size: item.product.size || null, quantity: item.quantity, priceAtPurchase: item.priceAtTime
         });
-
-        if (item.product.size) {
-          await tx.update(productSizes).set({ stock: sql`${productSizes.stock} - ${item.quantity}` })
-            .where(and(eq(productSizes.productId, item.product.id), eq(productSizes.size, item.product.size)));
-        }
-        await tx.update(products).set({ stock: sql`${products.stock} - ${item.quantity}` }).where(eq(products.id, item.product.id));
       }
 
-      // 5. Increment Promo Code usage counter securely within the transaction
       if (promoCode) {
         const upperCode = promoCode.toUpperCase();
-        await tx.update(promoCodes)
-          .set({ currentUses: sql`${promoCodes.currentUses} + 1` })
-          .where(eq(promoCodes.code, upperCode));
+        await tx.update(promoCodes).set({ currentUses: sql`${promoCodes.currentUses} + 1` }).where(eq(promoCodes.code, upperCode));
       }
 
-      if (cartId) await tx.delete(cartItems).where(eq(cartItems.cartId, cartId));
+      // WE NO LONGER DELETE THE CART HERE!
       return newOrder;
     });
 
@@ -136,14 +128,38 @@ export const verifyPayment = async (req, res) => {
     if (razorpay_signature === expectedSign) {
       const orderInfo = await db.select().from(orders).where(eq(orders.id, dbOrderId));
       
-      await db.update(orders).set({ status: 'paid' }).where(eq(orders.id, dbOrderId));
+      // --- THE FIX: DEDUCT STOCK & CLEAR CART ONLY WHEN PAYMENT IS SUCCESSFUL ---
+      await db.transaction(async (tx) => {
+        
+        // 1. Mark as Paid
+        await tx.update(orders).set({ status: 'paid' }).where(eq(orders.id, dbOrderId));
 
-      await db.insert(payments).values({
-        orderId: dbOrderId,
-        razorpayPaymentId: razorpay_payment_id,
-        razorpayOrderId: razorpay_order_id,
-        razorpaySignature: razorpay_signature,
-        amount: orderInfo[0].totalAmount
+        // 2. Deduct Stock
+        const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, dbOrderId));
+        for (const item of items) {
+          if (item.size) {
+            await tx.update(productSizes).set({ stock: sql`${productSizes.stock} - ${item.quantity}` })
+              .where(and(eq(productSizes.productId, item.productId), eq(productSizes.size, item.size)));
+          }
+          await tx.update(products).set({ stock: sql`${products.stock} - ${item.quantity}` }).where(eq(products.id, item.productId));
+        }
+
+        // 3. Clear the User's Cart
+        if (orderInfo[0].userId) {
+          const userCart = await tx.select().from(cart).where(eq(cart.userId, orderInfo[0].userId));
+          if (userCart.length > 0) {
+            await tx.delete(cartItems).where(eq(cartItems.cartId, userCart[0].id));
+          }
+        }
+
+        // 4. Record the Payment
+        await tx.insert(payments).values({
+          orderId: dbOrderId,
+          razorpayPaymentId: razorpay_payment_id,
+          razorpayOrderId: razorpay_order_id,
+          razorpaySignature: razorpay_signature,
+          amount: orderInfo[0].totalAmount
+        });
       });
 
       return res.status(200).json({ message: "Payment verified successfully" });
@@ -162,7 +178,14 @@ export const getMyOrders = async (req, res) => {
     if (!userResult.length) return res.status(404).json({ error: "User not found" });
     const internalUserId = userResult[0].id;
 
-    const myOrders = await db.select().from(orders).where(eq(orders.userId, internalUserId));
+    // THE FIX: Hide 'pending' orders from the user's dashboard!
+    const myOrders = await db.select().from(orders).where(
+      and(
+        eq(orders.userId, internalUserId),
+        ne(orders.status, 'pending') // <-- Ignore abandoned checkouts
+      )
+    );
+
     const formattedOrders = await Promise.all(myOrders.map(async (order) => {
       const items = await db.select({
         quantity: orderItems.quantity,
@@ -189,7 +212,8 @@ export const getMyOrders = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
   try {
-    const allOrders = await db.select().from(orders);
+    // Hide pending orders from Admin Dashboard too!
+    const allOrders = await db.select().from(orders).where(ne(orders.status, 'pending'));
     res.status(200).json(allOrders);
   } catch (error) {
     console.error("Fetch All Orders Error:", error);
@@ -202,8 +226,6 @@ export const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // The prompt says "updating orderStatus in orders", but the field in schema model is "status". 
-    // Assuming the user meant updating the order's status.
     const updatedOrder = await db.update(orders)
       .set({ status: status })
       .where(eq(orders.id, id))

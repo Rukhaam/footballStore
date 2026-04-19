@@ -175,7 +175,34 @@ export const searchProducts = async (req, res) => {
 
 export const addProduct = async (req, res) => {
   try {
-    const newProduct = await db.insert(products).values(req.body).returning();
+    const { 
+      name, 
+      price, 
+      originalPrice, 
+      stock, 
+      categoryId, 
+      collectionId, 
+      productImageUrl, 
+      gallery, 
+      description 
+    } = req.body;
+
+    const newProduct = await db.insert(products).values({
+      productName: name,
+      price: price,
+      
+      originalPrice: originalPrice === "" ? null : originalPrice, 
+      
+      stock: stock || 0,
+      categoryId: categoryId || null,
+      collectionId: collectionId || null,
+      productImageUrl: productImageUrl,
+      
+      gallery: gallery || [], 
+      
+      description: description
+    }).returning();
+
     res.status(201).json(newProduct[0] || newProduct);
   } catch (error) {
     console.error("Add Product Error:", error);
