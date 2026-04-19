@@ -16,8 +16,13 @@ import { apiLimiter } from './middlewares/rateLimiter.js';
 dotenv.config();
 
 const app = express();
-
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173', 
+    'https://kinetic-arena.vercel.app' 
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 
