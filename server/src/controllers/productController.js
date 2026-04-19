@@ -1,7 +1,7 @@
 import { db } from '../config/db.js';
-import { products, collections ,categories,productSizes} from '../models/schema.js';
-
+import { products, collections, categories, productSizes } from '../models/schema.js';
 import { eq, ilike, sql } from 'drizzle-orm';
+
 export const getAllJerseys = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -43,14 +43,15 @@ export const getCollections = async (_, res) => {
     res.status(500).json({ error: "Failed to fetch collections" });
   }
 };
+
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
-
     const productResult = await db.select()
       .from(products)
       .where(eq(products.id, parseInt(id)));
+    
     if (!productResult.length) {
       return res.status(404).json({ error: "Product not found" });
     }
@@ -71,6 +72,7 @@ export const getProductById = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch product details" });
   }
 };
+
 export const getCategories = async (req, res) => {
   try {
     const allCategories = await db.select().from(categories);
@@ -91,16 +93,16 @@ export const getProductsByCategory = async (req, res) => {
     const categoryResult = await db.select().from(categories).where(eq(categories.id, parseInt(id)));
     if (!categoryResult.length) return res.status(404).json({ error: "Category not found" });
 
-    // 3. Fetch ONLY the exact 15 products for this specific page
+    // 3. Fetch ONLY the exact products for this specific page
     const categoryProducts = await db.select()
       .from(products)
       .where(eq(products.categoryId, parseInt(id)))
       .limit(limit)
       .offset(offset);
 
-    // 4. Calculate total pages (get total count of items in this category)
-    const allItems = await db.select({ id: products.id }).from(products).where(eq(products.categoryId, parseInt(id)));
-    const totalItems = allItems.length;
+    // 4. Calculate total pages
+    const countResult = await db.select({ count: sql`count(*)` }).from(products).where(eq(products.categoryId, parseInt(id)));
+    const totalItems = Number(countResult[0].count);
     const totalPages = Math.ceil(totalItems / limit);
 
     // 5. Send it all back to the frontend
@@ -119,27 +121,48 @@ export const getProductsByCategory = async (req, res) => {
   }
 };
 
+// --- UPDATED: Added Pagination to getCollectionById ---
 export const getCollectionById = async (req, res) => {
   try {
     const { id } = req.params;
-    const collectionData = await db.select().from(collections).where(eq(collections.id, id));
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+    const offset = (page - 1) * limit;
+
+    // 1. Fetch the collection details
+    const collectionData = await db.select().from(collections).where(eq(collections.id, parseInt(id)));
     
     if (collectionData.length === 0) {
       return res.status(404).json({ error: "Collection not found" });
     }
 
-    const collectionProducts = await db.select().from(products).where(eq(products.collectionId, id));
+    // 2. Fetch ONLY the exact products for this specific page
+    const collectionProducts = await db.select()
+      .from(products)
+      .where(eq(products.collectionId, parseInt(id)))
+      .limit(limit)
+      .offset(offset);
 
+    // 3. Calculate total items and total pages
+    const countResult = await db.select({ count: sql`count(*)` }).from(products).where(eq(products.collectionId, parseInt(id)));
+    const totalItems = Number(countResult[0].count);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // 4. Send the structured response
     res.status(200).json({
       collection: collectionData[0],
-      products: collectionProducts
+      products: collectionProducts,
+      pagination: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalItems: totalItems
+      }
     });
   } catch (error) {
     console.error("Failed to fetch collection details:", error);
     res.status(500).json({ error: "Failed to fetch collection details" });
   }
 };
-
 
 export const searchProducts = async (req, res) => {
   try {

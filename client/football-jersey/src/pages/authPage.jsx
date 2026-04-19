@@ -15,6 +15,23 @@ import {
 } from "lucide-react";
 import { useToast } from "../context/contextHook";
 
+
+const ALLOWED_DOMAINS = [
+  "gmail.com",
+  "yahoo.com",
+  "yahoo.co.in",
+  "outlook.com",
+  "hotmail.com",
+  "icloud.com",
+  "rediffmail.com"
+];
+
+// Requires: 8+ chars, 1 uppercase, 1 lowercase, 1 number
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\w\W]{8,}$/;
+
+// Requires: Only letters and spaces, minimum 2 characters
+const NAME_REGEX = /^[a-zA-Z\s]{2,}$/;
+
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -25,41 +42,75 @@ const AuthPage = () => {
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
- const { addToast} = useToast();
+  const { addToast } = useToast();
+
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
+    // --- 1. Basic Sanitization ---
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+    const cleanFullName = fullName.trim();
+
     try {
+      // --- 2. Input Validation (Only run on Registration) ---
+      if (!isLogin) {
+        if (!NAME_REGEX.test(cleanFullName)) {
+          throw new Error("Please enter a valid full name (letters only).");
+        }
+
+        const emailDomain = cleanEmail.split("@")[1];
+        if (!emailDomain || !ALLOWED_DOMAINS.includes(emailDomain)) {
+          throw new Error("Please use a recognized email provider (e.g., Gmail, Yahoo, Outlook).");
+        }
+
+        if (!PASSWORD_REGEX.test(cleanPassword)) {
+          throw new Error("Password must be at least 8 characters long, including an uppercase letter, a lowercase letter, and a number.");
+        }
+        if(isLogin && cleanPassword.length < 8) {
+          throw new Error("Password must be at least 8 characters long.");
+        }
+        if(isLogin && cleanPassword.length > 100) { 
+          throw new Error("Password is too long. Please enter a password under 100 characters.");
+        }
+      }
+
+      // --- 3. Authentication Execution ---
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: cleanEmail,
+          password: cleanPassword,
         });
         if (error) throw error;
 
         dispatch(setUser(data.user));
         navigate("/");
       } else {
-        const { data: checkData } = await api.get(`/user/check-email/${email}`);
+        // Check if email exists in your custom backend
+        const { data: checkData } = await api.get(`/user/check-email/${cleanEmail}`);
 
         if (checkData.exists) {
           throw new Error("This email is already registered in the Arena.");
         }
 
+        // Register with Supabase
         const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
+          email: cleanEmail,
+          password: cleanPassword,
           options: {
-            data: { full_name: fullName },
+            data: { full_name: cleanFullName },
           },
         });
 
         if (signUpError) throw signUpError;
 
-        addToast("Registration successful! Welcome to the club. Please log in.");
+        addToast("Registration successful! Welcome to the club. Please log in.", "success");
         setIsLogin(true);
+        // Clear fields after successful registration
+        setPassword("");
+        setFullName("");
       }
     } catch (error) {
       setErrorMsg(error.message);
@@ -101,7 +152,7 @@ const AuthPage = () => {
         {errorMsg && (
           <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm mb-6 font-inter animate-in fade-in slide-in-from-top-2">
             <ShieldAlert size={18} className="shrink-0" />
-            {errorMsg}
+            <p className="leading-snug">{errorMsg}</p>
           </div>
         )}
 
@@ -192,6 +243,7 @@ const AuthPage = () => {
             onClick={() => {
               setIsLogin(!isLogin);
               setErrorMsg("");
+              setPassword(""); // clear password on switch
             }}
             className="text-white/40 hover:text-brand-primary transition-all text-xs font-inter uppercase tracking-[0.2em]"
           >

@@ -139,7 +139,7 @@ const ProductDetailsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-start">
           
           {/* --- LEFT COLUMN: IMAGE GALLERY --- */}
-          <div className="flex flex-col gap-4 sticky top-24">
+          <div className="flex flex-col gap-4  top-24">
             {/* Main Active Image */}
             <div className="relative aspect-[4/5] bg-surface-low rounded-2xl flex items-center justify-center p-10 overflow-hidden shadow-2xl border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-brand-primary/5 opacity-50 pointer-events-none"></div>

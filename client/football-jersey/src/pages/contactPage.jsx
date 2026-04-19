@@ -125,8 +125,8 @@ const ContactPage = () => {
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-white font-inter uppercase tracking-widest mb-1">Call Us</h4>
-                    <p className="text-text-secondary font-inter">+1 (800) 123-KINETIC</p>
-                    <p className="text-xs text-text-secondary font-inter mt-1">Mon-Fri, 9am - 6pm EST</p>
+                    <p className="text-text-secondary font-inter">+91 9797116244</p>
+                    <p className="text-xs text-text-secondary font-inter mt-1">Mon-Fri, 9am - 6pm IST</p>
                   </div>
                 </div>
 
@@ -137,9 +137,9 @@ const ContactPage = () => {
                   <div>
                     <h4 className="text-sm font-bold text-white font-inter uppercase tracking-widest mb-1">Headquarters</h4>
                     <p className="text-text-secondary font-inter leading-relaxed">
-                      100 Kinetic Ave, Suite 300<br />
-                      Stadium District, Neo City<br />
-                      NY 10001
+                    90ft Road <br />
+                     AhmadNagar <br />
+                     Srinagar,190020
                     </p>
                   </div>
                 </div>

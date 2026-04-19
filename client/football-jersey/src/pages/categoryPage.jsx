@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Helmet } from 'react-helmet-async'; // <-- 1. Imported Helmet
 import api from '../services/api';
 import ProductCard from '../components/productCard';
 
@@ -13,6 +14,7 @@ const CategoryPage = () => {
   useEffect(() => {
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   }, [categoryId]);
+
   useEffect(() => {
     const fetchCategoryData = async () => {
       setLoading(true);
@@ -54,12 +56,34 @@ const CategoryPage = () => {
   }
 
   if (!data.category) {
-    return <div className="text-center text-white mt-20 text-2xl">Category not found</div>;
+    return (
+      <>
+        <Helmet>
+          <title>Category Not Found | Kinetic Store</title>
+          <meta name="robots" content="noindex" />
+        </Helmet>
+        <div className="text-center text-white mt-20 text-2xl">Category not found</div>
+      </>
+    );
   }
 
   return (
     <div className="px-6 pt-12 pb-24 w-full max-w-7xl mx-auto">
       
+      {/* 2. Added Helmet for Dynamic Category SEO */}
+      <Helmet>
+        <title>
+          {data.category.categoryName} Gear {pagination.currentPage > 1 ? `- Page ${pagination.currentPage}` : ''} | Kinetic Store
+        </title>
+        <meta 
+          name="description" 
+          content={`Explore our exclusive collection of ${data.category.categoryName} football products. Shop the latest kits and premium fan gear at Kinetic Store.`} 
+        />
+        <meta property="og:title" content={`${data.category.categoryName} Gear | Kinetic Store`} />
+        <meta property="og:description" content={`Explore our exclusive collection of ${data.category.categoryName} football products.`} />
+        <meta property="og:url" content={window.location.href} />
+      </Helmet>
+
       {/* Category Header */}
       <div className="mb-12 border-b border-white/10 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
