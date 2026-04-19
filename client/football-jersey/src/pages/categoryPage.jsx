@@ -10,12 +10,9 @@ const CategoryPage = () => {
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalItems: 0 });
   const [loading, setLoading] = useState(true);
 
-  // If the user clicks a different category in the Navbar, reset to Page 1
   useEffect(() => {
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   }, [categoryId]);
-
-  // Fetch data whenever the Category ID OR the Current Page changes
   useEffect(() => {
     const fetchCategoryData = async () => {
       setLoading(true);
@@ -26,8 +23,6 @@ const CategoryPage = () => {
           products: response.data.products
         });
         setPagination(response.data.pagination);
-        
-        // Smoothly scroll back to the top of the grid when the page changes
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (error) {
         console.error("Failed to load category data:", error);

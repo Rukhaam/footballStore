@@ -34,7 +34,9 @@ export const updateUserProfile = async (req, res) => {
     if (!existingUser) {
       return res.status(404).json({ error: "User not found in database" });
     }
-
+    if(userName.length<5 ) {
+      return res.status(404).json({error:"UserNameLength Too Short"})
+    }
     const updatedUser = await db
       .update(users)
       .set({

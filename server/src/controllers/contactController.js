@@ -8,8 +8,6 @@ export const submitContactForm = async (req, res) => {
     if (!fullName || !email || !message) {
       return res.status(400).json({ error: "Name, email, and message are required." });
     }
-
-    // THE FIX: Use 'fullName' to match the JS key in your Drizzle schema
     await db.insert(contacts).values({ 
       fullName: fullName, 
       email: email, 

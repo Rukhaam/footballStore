@@ -16,16 +16,65 @@ const ContactPage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // --- FRONTEND VALIDATION & SANITIZATION ---
+  const validateForm = () => {
+    const { fullName, email, subject, message } = formData;
+
+    // 1. Name Validation (> 5 characters)
+    if (fullName.trim().length <= 5) {
+      return "Full Name must be longer than 5 characters.";
+    }
+
+    // 2. Email Validation (Regex match)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return "Please enter a valid email address.";
+    }
+
+    // 3. Subject Validation (< 100 characters and not empty)
+    if (subject.trim().length < 3) {
+      return "Subject must be at least 3 characters long.";
+    }
+    if (subject.trim().length > 100) {
+      return "Subject cannot exceed 100 characters.";
+    }
+
+    // 4. Message Validation 
+    if (message.trim().length < 10) {
+      return "Message is too short. Please provide more details.";
+    }
+    if (message.trim().length > 1000) {
+      return "Message cannot exceed 1000 characters.";
+    }
+
+    return null; // Passes all checks!
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Run the validator first
+    const validationError = validateForm();
+    if (validationError) {
+      setStatus({ loading: false, success: false, error: validationError });
+      return;
+    }
+
     setStatus({ loading: true, success: false, error: null });
 
+    // Sanitize the data (remove extra spaces, standardize email case)
+    const sanitizedData = {
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim().toLowerCase(),
+      subject: formData.subject.trim(),
+      message: formData.message.trim()
+    };
+
     try {
-      await api.post('/contact', formData);
+      await api.post('/contact', sanitizedData);
       setStatus({ loading: false, success: true, error: null });
-      setFormData({ fullName: '', email: '', subject: '', message: '' }); // Clear form
+      setFormData({ fullName: '', email: '', subject: '', message: '' }); 
       
-      // Reset success message after 5 seconds
       setTimeout(() => setStatus(prev => ({ ...prev, success: false })), 5000);
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -109,6 +158,7 @@ const ContactPage = () => {
                     required 
                     type="text" 
                     name="fullName" 
+                    maxLength={50} // Native HTML guard
                     value={formData.fullName} 
                     onChange={handleChange} 
                     className="w-full bg-surface-deep border border-white/10 rounded-lg px-4 py-3.5 text-white focus:outline-none focus:border-brand-primary transition-colors font-inter placeholder:text-white/20" 
@@ -121,6 +171,7 @@ const ContactPage = () => {
                     required 
                     type="email" 
                     name="email" 
+                    maxLength={100} // Native HTML guard
                     value={formData.email} 
                     onChange={handleChange} 
                     className="w-full bg-surface-deep border border-white/10 rounded-lg px-4 py-3.5 text-white focus:outline-none focus:border-brand-primary transition-colors font-inter placeholder:text-white/20" 
@@ -135,6 +186,7 @@ const ContactPage = () => {
                   required 
                   type="text" 
                   name="subject" 
+                  maxLength={100} // Native HTML guard (< 100 constraint)
                   value={formData.subject} 
                   onChange={handleChange} 
                   className="w-full bg-surface-deep border border-white/10 rounded-lg px-4 py-3.5 text-white focus:outline-none focus:border-brand-primary transition-colors font-inter placeholder:text-white/20" 
@@ -147,6 +199,7 @@ const ContactPage = () => {
                 <textarea 
                   required 
                   name="message" 
+                  maxLength={1000} // Native HTML guard
                   value={formData.message} 
                   onChange={handleChange} 
                   rows="5"

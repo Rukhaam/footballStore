@@ -15,8 +15,6 @@ export const requireAuth = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-
-    // Let Supabase handle the complex ES256 decryption!
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data.user) {
@@ -24,7 +22,6 @@ export const requireAuth = async (req, res, next) => {
       return res.status(403).json({ error: 'Forbidden: Invalid or expired token' });
     }
 
-    // Success! Attach the user info to the request
     req.user = {
       supabaseId: data.user.id,
       email: data.user.email,
@@ -35,5 +32,29 @@ export const requireAuth = async (req, res, next) => {
   } catch (err) {
     console.error("🔴 Critical Auth Error:", err.message);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+export const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next(); 
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data, error } = await supabase.auth.getUser(token);
+    if (!error && data?.user) {
+      req.user = {
+        supabaseId: data.user.id,
+        email: data.user.email,
+        role: data.user.role 
+      };
+    }
+
+    next();
+  } catch (err) {
+    next(); 
   }
 };

@@ -102,3 +102,7 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+::selection {
+  background-color: #d0ff4d;
+  color: black;
+}

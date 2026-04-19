@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import ProductCard from './ProductCard';
+import ProductCard from './productCard';
 
 const ProductGrid = () => {
   const [jerseys, setJerseys] = useState([]);
@@ -12,7 +12,7 @@ const ProductGrid = () => {
       try {
         // Fetch from our public product route
         const response = await api.get('/store/jerseys');
-        setJerseys(response.data);
+        setJerseys(response.data.data || response.data || []);
       } catch (err) {
         console.error("Error fetching jerseys:", err);
         setError("Failed to load the collection. Please try again later.");

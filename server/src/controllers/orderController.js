@@ -1,10 +1,10 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { db } from '../config/db.js';
-import { users, cart, cartItems, orders, orderItems, products, productSizes, payments } from '../models/schema.js';
+// 1. Import promoCodes table
+import { users, cart, cartItems, orders, orderItems, products, productSizes, payments, promoCodes } from '../models/schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 
-// Initialize Razorpay
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -12,7 +12,8 @@ const razorpay = new Razorpay({
 
 export const checkout = async (req, res) => {
   try {
-    const { addressSnapshot, customerDetails, cartItems: frontendItems, isGuest } = req.body;
+    // 2. Extract promoCode from the request payload
+    const { addressSnapshot, customerDetails, cartItems: frontendItems, isGuest, promoCode } = req.body;
     
     if (!frontendItems || frontendItems.length === 0) {
       return res.status(400).json({ error: "Cart is empty" });
@@ -30,15 +31,43 @@ export const checkout = async (req, res) => {
       }
     }
 
+    // Calculate Base Subtotal
     let subtotalAmount = 0;
     frontendItems.forEach(item => { 
       subtotalAmount += (parseFloat(item.priceAtTime) * item.quantity); 
     });
+    let discountAmount = 0;
+
+    if (promoCode) {
+      const upperCode = promoCode.toUpperCase();
+      const [promo] = await db.select().from(promoCodes).where(eq(promoCodes.code, upperCode));
+
+      if (!promo) return res.status(400).json({ error: "Invalid promo code" });
+      if (!promo.isActive) return res.status(400).json({ error: "This promo code is no longer active" });
+      if (promo.expiresAt && new Date() > new Date(promo.expiresAt)) return res.status(400).json({ error: "This promo code has expired" });
+      if (promo.maxUses !== null && promo.currentUses >= promo.maxUses) return res.status(400).json({ error: "This promo code has reached its usage limit" });
+
+      // --- THE FIX: Protect the final order math ---
+      if (promo.discountType === 'fixed' && subtotalAmount <= parseFloat(promo.discountValue)) {
+        return res.status(400).json({ 
+          error: `Cart subtotal must be greater than ₹${parseFloat(promo.discountValue)} to use this code.` 
+        });
+      }
+
+      // Calculate secure discount based on DB values
+      if (promo.discountType === 'percentage') {
+        discountAmount = subtotalAmount * (parseFloat(promo.discountValue) / 100);
+      } else if (promo.discountType === 'fixed') {
+        discountAmount = parseFloat(promo.discountValue);
+      }
+    }
     
     const shipping = subtotalAmount > 100 ? 0 : 99.00;
-    const cleanTotal = (Math.round((subtotalAmount + shipping) * 100) / 100).toFixed(2);
 
-    // 1. Create DB Transaction (Status defaults to 'pending')
+    // 4. Ensure total never drops below 0 before adding shipping
+    const totalBeforeShipping = Math.max(0, subtotalAmount - discountAmount);
+    const cleanTotal = (Math.round((totalBeforeShipping + shipping) * 100) / 100).toFixed(2);
+
     const result = await db.transaction(async (tx) => {
       const [newOrder] = await tx.insert(orders).values({
         userId, isGuest,
@@ -61,26 +90,31 @@ export const checkout = async (req, res) => {
         await tx.update(products).set({ stock: sql`${products.stock} - ${item.quantity}` }).where(eq(products.id, item.product.id));
       }
 
+      // 5. Increment Promo Code usage counter securely within the transaction
+      if (promoCode) {
+        const upperCode = promoCode.toUpperCase();
+        await tx.update(promoCodes)
+          .set({ currentUses: sql`${promoCodes.currentUses} + 1` })
+          .where(eq(promoCodes.code, upperCode));
+      }
+
       if (cartId) await tx.delete(cartItems).where(eq(cartItems.cartId, cartId));
       return newOrder;
     });
 
-    // 2. Create Razorpay Order
-    // NOTE: Razorpay expects the amount in the smallest currency unit (cents or paise)
     const options = {
       amount: Math.round(parseFloat(cleanTotal) * 100), 
-      currency: "INR", // Change to "INR" if your Razorpay account doesn't have international payments enabled!
+      currency: "INR",
       receipt: `receipt_order_${result.id}`
     };
 
     const razorpayOrder = await razorpay.orders.create(options);
 
-    // 3. Send both DB Order ID and Razorpay Order details to frontend
     res.status(200).json({ 
       message: "Order initiated", 
       dbOrderId: result.id,
       razorpayOrder,
-      keyId: process.env.RAZORPAY_KEY_ID // Safe to send public key to frontend
+      keyId: process.env.RAZORPAY_KEY_ID 
     });
 
   } catch (error) {
@@ -89,12 +123,10 @@ export const checkout = async (req, res) => {
   }
 };
 
-// NEW: Verify Payment Signature
 export const verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, dbOrderId } = req.body;
 
-    // Create the expected signature
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSign = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -102,13 +134,10 @@ export const verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (razorpay_signature === expectedSign) {
-      // 1. Fetch order to get the amount
       const orderInfo = await db.select().from(orders).where(eq(orders.id, dbOrderId));
       
-      // 2. Update Order Status to 'paid'
       await db.update(orders).set({ status: 'paid' }).where(eq(orders.id, dbOrderId));
 
-      // 3. Log the successful payment into our new payments table
       await db.insert(payments).values({
         orderId: dbOrderId,
         razorpayPaymentId: razorpay_payment_id,
@@ -126,17 +155,14 @@ export const verifyPayment = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 export const getMyOrders = async (req, res) => {
   try {
-    // 1. Get the internal user ID
     const userResult = await db.select().from(users).where(eq(users.supabaseId, req.user.supabaseId));
     if (!userResult.length) return res.status(404).json({ error: "User not found" });
     const internalUserId = userResult[0].id;
 
-    // 2. Fetch all orders for this user
     const myOrders = await db.select().from(orders).where(eq(orders.userId, internalUserId));
-
-    // 3. For each order, fetch the individual items and product details
     const formattedOrders = await Promise.all(myOrders.map(async (order) => {
       const items = await db.select({
         quantity: orderItems.quantity,
@@ -152,12 +178,40 @@ export const getMyOrders = async (req, res) => {
       return { ...order, items };
     }));
 
-    // 4. Sort so the newest orders appear at the top
     formattedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.status(200).json(formattedOrders);
   } catch (error) {
     console.error("Fetch Orders Error:", error);
     res.status(500).json({ error: "Failed to fetch orders" });
+  }
+};
+
+export const getAllOrders = async (req, res) => {
+  try {
+    const allOrders = await db.select().from(orders);
+    res.status(200).json(allOrders);
+  } catch (error) {
+    console.error("Fetch All Orders Error:", error);
+    res.status(500).json({ error: "Failed to fetch all orders" });
+  }
+};
+
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // The prompt says "updating orderStatus in orders", but the field in schema model is "status". 
+    // Assuming the user meant updating the order's status.
+    const updatedOrder = await db.update(orders)
+      .set({ status: status })
+      .where(eq(orders.id, id))
+      .returning();
+
+    res.status(200).json({ message: "Status updated successfully", order: updatedOrder[0] });
+  } catch (error) {
+    console.error("Update Order Status Error:", error);
+    res.status(500).json({ error: "Failed to update order status" });
   }
 };

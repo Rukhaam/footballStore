@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { ShoppingCart, User, Menu, X, ChevronDown, ChevronRight, ArrowLeft, LogOut } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, ChevronDown, ChevronRight, ArrowLeft, LogOut, Search } from 'lucide-react';
 import { toggleCart } from '../features/cartSlice';
+import { toggleSearch } from '../features/searchSlice'; 
 import { logout } from '../features/authSlice';
 import api from '../services/api';
 import { supabase } from '../services/supabaseClient';
@@ -46,19 +47,28 @@ const Navbar = () => {
     setTimeout(() => setShowMobileCategories(false), 300); 
   };
 
+  // Helper to open search from mobile menu
+  const handleMobileSearch = () => {
+    closeMobileMenu();
+    dispatch(toggleSearch());
+  };
+
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-[60] bg-surface-base/95 backdrop-blur-md border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-[60] bg-surface-base/95 backdrop-blur-md ">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           
+          {/* Mobile Menu Button */}
           <button className="md:hidden p-2 -ml-2 text-white" onClick={() => setIsMobileMenuOpen(true)}>
             <Menu size={28} />
           </button>
 
+          {/* Logo */}
           <Link to="/" className="kinetic-heading text-2xl text-white tracking-wider flex items-center gap-2 absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
             <span className="text-brand-primary">KINETIC</span> ARENA
           </Link>
 
+          {/* Center Desktop Nav */}
           <div className="hidden md:flex items-center gap-10 absolute left-1/2 -translate-x-1/2 h-full">
             <Link to="/" className="text-sm font-inter font-semibold text-text-secondary hover:text-white transition-colors uppercase tracking-widest">
               Home
@@ -72,12 +82,10 @@ const Navbar = () => {
               
               <div className="fixed top-20 w-max bg-surface-base border-b border-white/10 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform -translate-y-2 group-hover:translate-y-0 z-50">
                 <div className="w-max px-6 lg:px-12 py-12">
-                  
                   <div className="flex items-center justify-center mb-8">
                     <h2 className="kinetic-heading text-2xl text-white uppercase tracking-widest">Shop By Category</h2>
                     <Link to="/" className="text-brand-primary text-sm font-bold uppercase tracking-widest hover:underline ml-4">View All Gear →</Link>
                   </div>
-
                   <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
                     {categories.map((cat) => (
                       <Link 
@@ -85,14 +93,12 @@ const Navbar = () => {
                         to={`/category/${cat.id}`} 
                         className="group/card relative h-[250px] w-101 xl:h-[300px] rounded-xl overflow-hidden bg-surface-deep block border border-white/5 shadow-lg"
                       >
-                        {/* THE FIX: Dynamically loading the image from DB (handles both camelCase and snake_case backend responses) */}
                         <img 
                           src={cat.categoryUrl || cat.category_url || DEFAULT_CATEGORY_IMAGE} 
                           alt={cat.categoryName} 
                           className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover/card:scale-110" 
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent transition-opacity duration-300 group-hover/card:opacity-90"></div>
-                        
                         <div className="absolute bottom-0 left-0 w-full p-6 translate-y-4 group-hover/card:translate-y-0 transition-transform duration-300">
                           <h3 className="kinetic-heading text-white text-xl uppercase leading-tight mb-1">
                             {cat.categoryName}
@@ -104,10 +110,10 @@ const Navbar = () => {
                       </Link>
                     ))}
                   </div>
-
                 </div>
               </div>
             </div>
+            
             <Link to="/orders" className="text-sm font-inter font-semibold text-text-secondary hover:text-white transition-colors uppercase tracking-widest">
               orders
             </Link>
@@ -117,9 +123,19 @@ const Navbar = () => {
           </div>
 
           {/* Icons (Right Side) */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            
+            {/* Search Icon (Visible to Everyone) */}
+            <button 
+              onClick={() => dispatch(toggleSearch())} 
+              className="p-2 text-text-secondary hover:text-white transition-colors hidden md:block" // Hidden on mobile, added to sidebar instead
+              title="Search"
+            >
+              <Search size={22} />
+            </button>
+
             {isAuthenticated ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 md:gap-4">
                 <button onClick={() => dispatch(toggleCart())} className="relative p-2 text-text-secondary hover:text-white transition-colors">
                   <ShoppingCart size={24} />
                   {cartCount > 0 && (
@@ -133,9 +149,20 @@ const Navbar = () => {
                 </button>
               </div>
             ) : (
-              <Link to="/auth" className="hidden md:flex items-center gap-2 text-sm font-inter font-semibold text-text-secondary hover:text-white transition-colors">
-                <User size={20} /> Login
-              </Link>
+              <>
+                {/* Mobile Cart Icon for Guests */}
+                <button onClick={() => dispatch(toggleCart())} className="md:hidden relative p-2 text-text-secondary hover:text-white transition-colors">
+                  <ShoppingCart size={24} />
+                  {cartCount > 0 && (
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-brand-primary text-surface-base text-xs font-bold rounded-full flex items-center justify-center translate-x-1 -translate-y-1">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+                <Link to="/auth" className="hidden md:flex items-center gap-2 text-sm font-inter font-semibold text-text-secondary hover:text-white transition-colors">
+                  <User size={20} /> Login
+                </Link>
+              </>
             )}
           </div>
         </div>
@@ -161,6 +188,15 @@ const Navbar = () => {
               <Link to="/" onClick={closeMobileMenu} className="flex items-center justify-between py-4 text-xl kinetic-heading text-white border-b border-white/5">
                 Home
               </Link>
+              
+              {/* Search Mobile Button */}
+              <button onClick={handleMobileSearch} className="flex items-center justify-between py-4 text-xl kinetic-heading text-white border-b border-white/5 group">
+                Search
+                <div className="bg-white/5 p-2 rounded-full group-hover:bg-brand-primary/20 transition-colors">
+                  <Search size={20} className="text-text-secondary group-hover:text-brand-primary" />
+                </div>
+              </button>
+
               <button onClick={() => setShowMobileCategories(true)} className="flex items-center justify-between py-4 text-xl kinetic-heading text-white border-b border-white/5 group">
                 Categories 
                 <div className="bg-white/5 p-2 rounded-full group-hover:bg-brand-primary/20 transition-colors">
@@ -173,6 +209,7 @@ const Navbar = () => {
               <Link to="/contact" onClick={closeMobileMenu} className="flex items-center justify-between py-4 text-xl kinetic-heading text-white border-b border-white/5">
                 Contact
               </Link>
+              
               <div className="mt-auto pt-8">
                 {!isAuthenticated ? (
                   <Link to="/auth" onClick={closeMobileMenu} className="btn-primary w-full py-4 text-center flex justify-center">Login / Sign Up</Link>
@@ -198,7 +235,6 @@ const Navbar = () => {
                 >
                   <div className="w-24 h-16 sm:h-20 rounded-lg overflow-hidden shrink-0 relative">
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div>
-                    {/* THE FIX: Mobile image source updated to match DB */}
                     <img 
                       src={cat.categoryUrl || cat.category_url || DEFAULT_CATEGORY_IMAGE} 
                       alt={cat.categoryName} 

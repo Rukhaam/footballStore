@@ -4,12 +4,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ShoppingCart, Zap, ArrowLeft, Ruler, ChevronDown, Share2, Check, Truck, ArrowLeftRight } from 'lucide-react';
 import api from '../services/api';
 import { addItemToLocalCart, toggleCart } from '../features/cartSlice';
-
+import { useToast } from '../context/contextHook';
 const ProductDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const {addToast} =useToast();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,38 +35,27 @@ const ProductDetailsPage = () => {
     fetchProduct();
   }, [id]);
 
-  const handleAddToCart = async (openDrawerAfter = false) => {
-    if (!selectedSize) return alert("Please select a size first.");
-    if (!isAuthenticated) return navigate('/auth');
-
-    setIsAdding(true);
+  const handleAddToCart = async () => {
     try {
-      await api.post('/cart/add', { 
-        productId: product.id, 
-        quantity: 1,
-        size: selectedSize.size 
-      });
-      
+      // 1. Send it to the database
+      await api.post('/cart/add', { productId: product.id, quantity: 1, size: selectedSize });
+  
+      // 2. Instantly push it to Redux so the UI updates without a refresh!
       dispatch(addItemToLocalCart({
-        cartItemId: `temp-${Date.now()}`,
+        product: product, // Pass the whole product object
         quantity: 1,
-        priceAtTime: product.price,
-        product: {
-          id: product.id,
-          name: product.productName,
-          imageUrl: product.productImageUrl,
-          size: selectedSize.size 
-        }
+        size: selectedSize,
+        priceAtTime: product.price
       }));
-
-      if (openDrawerAfter) dispatch(toggleCart());
+      addToast("Item Added to Cart Success")
+      
+  
+      // 3. Pop the drawer open
+      dispatch(toggleCart());
     } catch (error) {
-      console.error('Failed to add to cart:', error);
-    } finally {
-      setIsAdding(false);
+      console.error("Failed to add to cart", error);
     }
   };
-
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);

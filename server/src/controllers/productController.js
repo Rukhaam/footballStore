@@ -1,11 +1,33 @@
 import { db } from '../config/db.js';
 import { products, collections ,categories,productSizes} from '../models/schema.js';
 
-import { eq } from 'drizzle-orm';
-export const getAllJerseys = async (_, res) => {
+import { eq, ilike, sql } from 'drizzle-orm';
+export const getAllJerseys = async (req, res) => {
   try {
-    const allJerseys = await db.select().from(products);
-    res.status(200).json(allJerseys);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const offset = (page - 1) * limit;
+
+    let query = db.select().from(products);
+    let countQuery = db.select({ count: sql`count(*)` }).from(products);
+
+    if (search) {
+      query = query.where(ilike(products.productName, `%${search}%`));
+      countQuery = countQuery.where(ilike(products.productName, `%${search}%`));
+    }
+
+    const allJerseys = await query.limit(limit).offset(offset);
+    const totalResult = await countQuery;
+    const total = Number(totalResult[0].count);
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      data: allJerseys,
+      total,
+      page,
+      totalPages
+    });
   } catch (error) {
     console.error("Error fetching jerseys:", error);
     res.status(500).json({ error: "Failed to fetch jerseys" });
@@ -25,27 +47,23 @@ export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1. Fetch the core product details
+
     const productResult = await db.select()
       .from(products)
       .where(eq(products.id, parseInt(id)));
-
-    // If no product exists, stop here
     if (!productResult.length) {
       return res.status(404).json({ error: "Product not found" });
     }
 
     const productData = productResult[0];
 
-    // 2. Fetch all available sizes and stock for this specific product
     const sizesData = await db.select()
       .from(productSizes)
       .where(eq(productSizes.productId, parseInt(id)));
 
-    // 3. Combine them perfectly to match the frontend we just built
     res.status(200).json({ 
       ...productData, 
-      sizes: sizesData // Attaches the array of sizes!
+      sizes: sizesData 
     });
 
   } catch (error) {
@@ -66,13 +84,10 @@ export const getCategories = async (req, res) => {
 export const getProductsByCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // 1. Get pagination parameters from the URL (default to Page 1, 15 items)
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 15;
     const offset = (page - 1) * limit;
 
-    // 2. Get the category details
     const categoryResult = await db.select().from(categories).where(eq(categories.id, parseInt(id)));
     if (!categoryResult.length) return res.status(404).json({ error: "Category not found" });
 
@@ -122,5 +137,62 @@ export const getCollectionById = async (req, res) => {
   } catch (error) {
     console.error("Failed to fetch collection details:", error);
     res.status(500).json({ error: "Failed to fetch collection details" });
+  }
+};
+
+
+export const searchProducts = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || req.query.q || '';
+    const offset = (page - 1) * limit;
+
+    let query = db.select().from(products);
+    let countQuery = db.select({ count: sql`count(*)` }).from(products);
+
+    if (search) {
+      query = query.where(ilike(products.productName, `%${search}%`));
+      countQuery = countQuery.where(ilike(products.productName, `%${search}%`));
+    }
+
+    const results = await query.limit(limit).offset(offset);
+    const totalResult = await countQuery;
+    const total = Number(totalResult[0].count);
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+       data: results,
+       total,
+       page,
+       totalPages
+    });
+  } catch (error) {
+    console.error("Search Error:", error);
+    res.status(500).json({ error: "Failed to search products" });
+  }
+};
+
+export const addProduct = async (req, res) => {
+  try {
+    const newProduct = await db.insert(products).values(req.body).returning();
+    res.status(201).json(newProduct[0] || newProduct);
+  } catch (error) {
+    console.error("Add Product Error:", error);
+    res.status(500).json({ error: "Failed to add product" });
+  }
+};
+
+export const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedProduct = await db.delete(products).where(eq(products.id, parseInt(id))).returning();
+    if (!deletedProduct?.length) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    res.status(200).json({ message: "Product deleted successfully", product: deletedProduct[0] });
+  } catch (error) {
+    console.error("Delete Product Error:", error);
+    res.status(500).json({ error: "Failed to delete product" });
   }
 };

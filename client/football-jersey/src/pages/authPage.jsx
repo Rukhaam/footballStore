@@ -13,6 +13,7 @@ import {
   Zap,
   ShieldAlert,
 } from "lucide-react";
+import { useToast } from "../context/contextHook";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -24,7 +25,7 @@ const AuthPage = () => {
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
+ const { addToast} = useToast();
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -57,7 +58,7 @@ const AuthPage = () => {
 
         if (signUpError) throw signUpError;
 
-        alert("Registration successful! Welcome to the club. Please log in.");
+        addToast("Registration successful! Welcome to the club. Please log in.");
         setIsLogin(true);
       }
     } catch (error) {
@@ -68,11 +69,12 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden w-full">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-brand-primary/10 blur-[160px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none"></div>
-
+    <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden w-full bg-white">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-white blur-[160px] rounded-full pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-white blur-[100px] rounded-full pointer-events-none"></div>
+      <h1 className=" absolute  text-5xl font-extrabold top-13 md:text-7xl text-black md:top-40 md:font-bold  ">WELCOME</h1>
       <div className="relative z-10 w-full max-w-md bg-surface-low/40 backdrop-blur-2xl border border-white/5 p-8 sm:p-10 rounded-[2.5rem] shadow-2xl">
+      
         <div className="flex justify-center mb-8">
           <div className="relative">
             <div className="absolute inset-0 bg-brand-primary/20 blur-xl rounded-full"></div>

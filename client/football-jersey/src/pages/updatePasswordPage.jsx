@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import { Lock, Loader2, ShieldAlert, KeyRound } from 'lucide-react';
+import { useToast } from '../context/contextHook';
 
 const UpdatePasswordPage = () => {
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
-
+  const {addToast } =useToast();
   const handlePasswordUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -22,7 +23,7 @@ const UpdatePasswordPage = () => {
 
       if (error) throw error;
       
-      alert('Password updated successfully! You can now use your new password.');
+      addToast('Password updated successfully! You can now use your new password.');
       navigate('/'); // Send them to the shop logged in!
     } catch (error) {
       setErrorMsg(error.message);

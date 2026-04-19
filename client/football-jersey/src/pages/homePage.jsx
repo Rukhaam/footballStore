@@ -35,7 +35,7 @@ const HomePage = () => {
       try {
         // Fetch Jerseys
         const jerseyRes = await api.get('/store/jerseys');
-        const allJerseys = jerseyRes.data;
+        const allJerseys = jerseyRes.data.data || jerseyRes.data || [];
         setBestSellers(allJerseys.length >= 5 ? allJerseys.slice(0, 5) : allJerseys);
         setPassionClubs(allJerseys.length >= 10 ? allJerseys.slice(5, 10) : allJerseys);
         setTrendingKits(allJerseys.length >= 20 ? allJerseys.slice(10, 20) : allJerseys);
@@ -151,10 +151,6 @@ const HomePage = () => {
           ))}
         </div>
       </section>
-
-      {/* =========================================
-          SECTION 3: SHOP BY CLUB (Collections)
-      ========================================= */}
    {/* =========================================
           SECTION 3: SHOP BY CLUB (Collections)
       ========================================= */}
@@ -205,13 +201,13 @@ const HomePage = () => {
                     <Link 
                       key={`club-${club.id}`} 
                       to={`/collection/${club.id}`} 
-                      className="group/card relative flex-none w-[280px] h-[380px] md:w-[320px] md:h-[420px] rounded-[2rem] overflow-hidden snap-center bg-surface-deep border border-white/5 transition-all duration-500 hover:border-brand-primary/50 hover:shadow-[0_0_40px_rgba(194,243,91,0.1)]"
+                      className="group/card relative flex-none w-[280px] h-[380px] md:w-[320px] md:h-[420px] rounded-3xl  overflow-hidden snap-center bg-surface-deep border border-white/5 transition-all duration-500 hover:border-brand-primary/50 hover:shadow-[0_0_40px_rgba(194,243,91,0.1)]"
                     >
                       {/* Image with scaling and brightening effect */}
                       <img 
                         src={club.logoUrl || club.logo_url || 'https://images.unsplash.com/photo-1518605368461-1ee7c532066d?q=80&w=800&auto=format&fit=crop'} 
                         alt={club.collectionName} 
-                        className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover/card:opacity-70 transition-all duration-700 group-hover/card:scale-110 ease-[cubic-bezier(0.33,1,0.68,1)]"
+                        className="absolute inset-0 w-20% h-full object-scale-down opacity-50 group-hover/card:opacity-70 transition-all duration-700 group-hover/card:scale-110 ease-[cubic-bezier(0.33,1,0.68,1)]"
                       />
                       
                       {/* Dual Gradients for deep contrast */}

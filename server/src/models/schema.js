@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, varchar, decimal, boolean } from "drizzle-orm/pg-core"; // <-- Added boolean!
+import { pgTable, serial, text, integer, timestamp, varchar, decimal, boolean } from "drizzle-orm/pg-core"; 
 
 // 1. USERS
 export const users = pgTable("users", {
@@ -33,7 +33,8 @@ export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   productName: varchar("product_name", { length: 255 }).notNull(),
   description: text("description"),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(), // The CURRENT selling price
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // <-- NEW: The price before the sale!
   stock: integer("stock").default(0).notNull(),
   categoryId: integer("category_id").references(() => categories.id),
   collectionId: integer("collection_id").references(() => collections.id), 
@@ -50,12 +51,11 @@ export const cart = pgTable("cart", {
 });
 
 // 6. CART ITEMS
-// 6. CART ITEMS
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),
   cartId: integer("cart_id").references(() => cart.id).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
-  size: varchar("size", { length: 10 }), // <-- ADD THIS LINE!
+  size: varchar("size", { length: 50 }), // <-- EXPANDED TO 50
   quantity: integer("quantity").notNull(),
   priceAtTime: decimal("price_at_time", { precision: 10, scale: 2 }).notNull(),
 });
@@ -63,24 +63,23 @@ export const cartItems = pgTable("cart_items", {
 // 7. ORDERS (UPDATED FOR GUEST CHECKOUT)
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id), // <-- Removed .notNull() so guests can order!
-  isGuest: boolean("is_guest").default(false).notNull(), // <-- New: Flag to identify guest orders
-  customerName: varchar("customer_name", { length: 255 }), // <-- New: Store guest name
-  customerEmail: varchar("customer_email", { length: 255 }), // <-- New: Store guest email
-  customerPhone: varchar("customer_phone", { length: 50 }), // <-- New: Store guest phone
+  userId: integer("user_id").references(() => users.id), // Removed .notNull() so guests can order!
+  isGuest: boolean("is_guest").default(false).notNull(), // Flag to identify guest orders
+  customerName: varchar("customer_name", { length: 255 }), // Store guest name
+  customerEmail: varchar("customer_email", { length: 255 }), // Store guest email
+  customerPhone: varchar("customer_phone", { length: 50 }), // Store guest phone
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(),
   addressSnapshot: text("address_snapshot").notNull(), 
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// 8. ORDER ITEMS
 // 8. ORDER ITEMS (UPDATED to include the chosen size)
 export const orderItems = pgTable("order_items", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").references(() => orders.id).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
-  size: varchar("size", { length: 10 }), // <-- NEW: Store the specific size ordered!
+  size: varchar("size", { length: 50 }), // <-- EXPANDED TO 50
   quantity: integer("quantity").notNull(),
   priceAtPurchase: decimal("price_at_purchase", { precision: 10, scale: 2 }).notNull(),
 });
@@ -95,10 +94,12 @@ export const contacts = pgTable("contacts", {
   status: varchar("status", { length: 50 }).default("Unread").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// PRODUCT SIZES
 export const productSizes = pgTable("product_sizes", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").references(() => products.id).notNull(),
-  size: varchar("size", { length: 10 }).notNull(), // e.g., 'S', 'M', 'L', 'XL'
+  size: varchar("size", { length: 50 }).notNull(), // <-- EXPANDED TO 50
   stock: integer("stock").default(0).notNull(),
 });
 
@@ -111,5 +112,18 @@ export const payments = pgTable("payments", {
   razorpaySignature: varchar("razorpay_signature", { length: 255 }).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   status: varchar("status", { length: 50 }).default("successful").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// 11. PROMO CODES (NEW TABLE)
+export const promoCodes = pgTable("promo_codes", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(), // e.g., 'KINETIC20'
+  discountType: varchar("discount_type", { length: 20 }).notNull(), // 'percentage' or 'fixed'
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(), // e.g., 20 for 20%, or 500 for ₹500 off
+  maxUses: integer("max_uses"), // null means unlimited uses
+  currentUses: integer("current_uses").default(0).notNull(),
+  expiresAt: timestamp("expires_at"), // null means never expires
+  isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
