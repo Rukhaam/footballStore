@@ -17,7 +17,7 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '24.x' # Changed to a stable version Azure supports
+          node-version: '24.x' # Changed to 20.x (Azure recommended stable version)
 
       - name: npm install, build, and test
         working-directory: ./server # <--- Tells GitHub to enter the server folder
@@ -44,7 +44,11 @@ jobs:
         with:
           name: node-app
 
-      - name: Login to Azure # <--- Fixed the broken indentation here!
+      # --- ADDED THE ZIP TRICK HERE ---
+      - name: Zip the application
+        run: zip -r release.zip .
+
+      - name: Login to Azure 
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_A24256A93A0D4E51A3B7FEED3CBE7BC0 }}
@@ -57,5 +61,4 @@ jobs:
         with:
           app-name: 'kinetic-backend'
           slot-name: 'Production'
-          package: .
-          
+          package: release.zip # --- CHANGED PACKAGE TO use the zipped file ---
