@@ -5,27 +5,46 @@ import { ShoppingCart, Zap, ArrowLeft, Ruler, ChevronDown, Share2, Check, Truck,
 import api from '../services/api';
 import { addItemToLocalCart, toggleCart } from '../features/cartSlice';
 import { useToast } from '../context/contextHook';
+
 const ProductDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const {addToast} =useToast();
+  const { addToast } = useToast();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [selectedSize, setSelectedSize] = useState(null);
   
+  // --- IMAGE GALLERY STATE ---
+  const [activeImage, setActiveImage] = useState('');
+  const [allImages, setAllImages] = useState([]);
+
   // State for accordions and share button
-  const [openSection, setOpenSection] = useState('description'); // Defaults to description open
+  const [openSection, setOpenSection] = useState('description'); 
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const response = await api.get(`/store/${id}`); 
-        setProduct(response.data);
+        const productData = response.data;
+        setProduct(productData);
+
+        // Combine primary image and gallery array
+        const images = [productData.productImageUrl];
+        if (productData.gallery && Array.isArray(productData.gallery)) {
+          images.push(...productData.gallery);
+        }
+        
+        // Filter out any empty/null values just in case
+        const cleanImages = images.filter(img => img);
+        
+        setAllImages(cleanImages);
+        setActiveImage(cleanImages[0] || 'https://via.placeholder.com/600x800?text=Jersey+Image');
+
       } catch (error) {
         console.error("Failed to load product:", error);
       } finally {
@@ -35,27 +54,30 @@ const ProductDetailsPage = () => {
     fetchProduct();
   }, [id]);
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = async (isBuyNow) => {
     try {
-      // 1. Send it to the database
       await api.post('/cart/add', { productId: product.id, quantity: 1, size: selectedSize });
   
-      // 2. Instantly push it to Redux so the UI updates without a refresh!
       dispatch(addItemToLocalCart({
-        product: product, // Pass the whole product object
+        product: product, 
         quantity: 1,
         size: selectedSize,
         priceAtTime: product.price
       }));
-      addToast("Item Added to Cart Success")
       
+      addToast("Gear Added to Cart!", "success");
   
-      // 3. Pop the drawer open
-      dispatch(toggleCart());
+      if (isBuyNow) {
+        navigate('/checkout');
+      } else {
+        dispatch(toggleCart());
+      }
     } catch (error) {
       console.error("Failed to add to cart", error);
+      addToast("Failed to add to cart", "error");
     }
   };
+
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -89,36 +111,80 @@ const ProductDetailsPage = () => {
 
   const displayStock = selectedSize ? selectedSize.stock : product.stock;
   const isOutOfStock = selectedSize ? selectedSize.stock === 0 : false;
+  const isOnSale = product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price);
 
   return (
-    <div className="px-6 pt-8 pb-20 w-full">
+    <div className="px-6 pt-8 pb-20 w-full animate-in fade-in duration-500">
       <div className="max-w-6xl mx-auto">
         
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors mb-8 font-inter text-sm uppercase tracking-wider">
           <ArrowLeft size={16} /> Back to Arena
         </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-start">
           
-          {/* Left Column: Image */}
-          <div className="relative aspect-[4/5] bg-surface-low rounded-2xl flex items-center justify-center p-10 overflow-hidden ambient-shadow z-10 top-24 h-max">
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-brand-primary/10 opacity-50"></div>
-            <img 
-              src={product.productImageUrl || 'https://via.placeholder.com/600x800?text=Jersey+Image'} 
-              alt={product.productName}
-              className="w-full h-full object-contain relative z-10 animate-fade-in"
-            />
+          {/* --- LEFT COLUMN: IMAGE GALLERY --- */}
+          <div className="flex flex-col gap-4  top-24">
+            {/* Main Active Image */}
+            <div className="relative aspect-[4/5] bg-surface-low rounded-2xl flex items-center justify-center p-10 overflow-hidden shadow-2xl border border-white/5">
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-brand-primary/5 opacity-50 pointer-events-none"></div>
+              
+              {isOnSale && (
+                <div className="absolute top-4 left-4 z-20 bg-red-500/90 backdrop-blur-md border border-red-400 text-white text-[10px] font-bold font-inter px-3 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg animate-pulse">
+                  Sale
+                </div>
+              )}
+
+              <img 
+                src={activeImage} 
+                alt={product.productName}
+                className="w-full h-full object-contain relative z-10 animate-in fade-in zoom-in-95 duration-300"
+                key={activeImage} // Forces re-render animation when image changes
+              />
+            </div>
+
+            {/* Thumbnail Strip */}
+            {allImages.length > 1 && (
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {allImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveImage(img)}
+                    className={`relative w-20 h-24 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                      activeImage === img 
+                        ? 'border-brand-primary opacity-100 scale-100 shadow-[0_0_15px_rgba(0,255,102,0.2)]' 
+                        : 'border-white/5 opacity-60 hover:opacity-100 hover:border-white/20 scale-95 hover:scale-100'
+                    }`}
+                  >
+                    <div className="absolute inset-0 bg-surface-deep"></div>
+                    <img 
+                      src={img} 
+                      alt={`Thumbnail ${idx + 1}`} 
+                      className="w-full h-full object-contain relative z-10 p-2"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Right Column: Details */}
+          {/* --- RIGHT COLUMN: DETAILS --- */}
           <div className="flex flex-col justify-center relative z-20">
-            <div className="mb-8 border-b border-white/10 pb-8 mt-20">
-              <h1 className="kinetic-heading text-4xl md:text-5xl lg:text-6xl leading-tight mb-4 uppercase text-white">
+            <div className="mb-8 border-b border-white/10 pb-8 mt-2 md:mt-10">
+              <h1 className="kinetic-heading text-4xl md:text-5xl lg:text-6xl leading-tight mb-4 uppercase text-white drop-shadow-md">
                 {product.productName}
               </h1>
-              <p className="font-inter text-3xl text-brand-primary font-bold">
-              ₹{parseFloat(product.price).toFixed(2)}
-              </p>
+              
+              <div className="flex items-end gap-3">
+                <p className="font-inter text-3xl text-brand-primary font-bold">
+                  ₹{parseFloat(product.price).toFixed(2)}
+                </p>
+                {isOnSale && (
+                  <p className="font-inter text-xl text-text-secondary font-bold line-through mb-1">
+                    ₹{parseFloat(product.originalPrice).toFixed(2)}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* SIZE SELECTOR */}
@@ -146,7 +212,7 @@ const ProductDetailsPage = () => {
                         ${!isAvailable 
                           ? 'border-white/5 bg-surface-deep text-white/20 cursor-not-allowed' 
                           : isSelected 
-                            ? 'border-brand-primary bg-brand-primary text-black scale-105 z-30' 
+                            ? 'border-brand-primary bg-brand-primary text-black scale-105 z-30 shadow-[0_0_15px_rgba(0,255,102,0.4)]' 
                             : 'border-white/10 bg-surface-low text-white hover:border-brand-primary/50 hover:bg-surface-high cursor-pointer z-30'
                         }
                       `}
@@ -223,8 +289,8 @@ const ProductDetailsPage = () => {
                 </button>
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openSection === 'shipping' ? 'max-h-[500px] pb-6 opacity-100' : 'max-h-0 opacity-0'}`}>
                   <ul className="kinetic-body text-text-secondary text-base leading-relaxed font-inter space-y-2">
-                    <li>• <strong className="text-white">Standard Delivery:</strong> 3-5 business days (Free over ₹5,000)</li>
-                    <li>• <strong className="text-white">Express Delivery:</strong> 1-2 business days (₹499)</li>
+                    <li>• <strong className="text-white">Standard Delivery:</strong> 3-5 business days (Free over ₹100)</li>
+                    <li>• <strong className="text-white">Express Delivery:</strong> 1-2 business days (₹99)</li>
                     <li>• Orders are processed and dispatched within 24 hours.</li>
                     <li>• Full tracking provided via email and SMS.</li>
                   </ul>

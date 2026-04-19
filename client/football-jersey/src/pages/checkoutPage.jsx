@@ -64,8 +64,8 @@ const CheckoutPage = () => {
     (sum, item) => sum + parseFloat(item.priceAtTime) * item.quantity,
     0
   );
-  const shipping = subtotal > 100 ? 0 : 15.0;
-  
+  // CheckoutPage.jsx
+const shipping = subtotal > 100 ? 0 : 99.0; // Changed 15.0 to 99.0
   // Calculate Discount
   let discountAmount = 0;
   if (appliedPromo) {
@@ -208,14 +208,20 @@ const CheckoutPage = () => {
         return;
       }
 
-      // Step 3: Configure and open the Razorpay Modal
-      const options = {
+  const options = {
         key: data.keyId,
         amount: data.razorpayOrder.amount,
         currency: data.razorpayOrder.currency,
         name: "Kinetic Arena",
         description: "Premium Football Gear",
         order_id: data.razorpayOrder.id,
+        
+        modal: {
+          ondismiss: () => {
+            setIsProcessing(false);
+            setFormError("Payment window was closed. You can try again when you're ready.");
+          }
+        },
         handler: async function (response) {
           try {
             await api.post("/orders/verify-payment", {
