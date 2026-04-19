@@ -17,7 +17,7 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '24.x' # Changed to a stable version Azure supports
+          node-version: '24.x' # Changed to 20.x (Azure recommended stable version)
 
       - name: npm install, build, and test
         working-directory: ./server # <--- Tells GitHub to enter the server folder
@@ -32,7 +32,7 @@ jobs:
           name: node-app
           path: ./server # <--- Only uploads your backend code, not the frontend
 
-deploy:
+  deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
@@ -44,16 +44,16 @@ deploy:
         with:
           name: node-app
 
-      # 1. ADD THIS NEW ZIP STEP HERE:
+      # --- ADDED THE ZIP TRICK HERE ---
       - name: Zip the application
         run: zip -r release.zip .
 
-      - name: Login to Azure
+      - name: Login to Azure 
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_... }} # (Keep your secret IDs)
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_... }} 
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_... }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_A24256A93A0D4E51A3B7FEED3CBE7BC0 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_498F043B54864D83842D00C8CD5C6C92 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CEF9D4D600E145B39266D52B7ED2CF67 }}
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
@@ -61,5 +61,4 @@ deploy:
         with:
           app-name: 'kinetic-backend'
           slot-name: 'Production'
-          # 2. CHANGE THE PACKAGE TO YOUR NEW ZIP FILE:
-          package: release.zip
+          package: release.zip # --- CHANGED PACKAGE TO use the zipped file ---
