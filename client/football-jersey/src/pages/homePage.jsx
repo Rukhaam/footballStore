@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, ArrowRight, Star, Shield } from 'lucide-react';
+import { Helmet } from 'react-helmet-async'; // <-- 1. Imported Helmet
 import api from '../services/api';
 import ProductCard from '../components/productCard';
 import { HERO_SLIDES } from '../utils/constants';
@@ -90,6 +91,18 @@ const HomePage = () => {
 
   return (
     <div className="flex flex-col w-full overflow-hidden bg-surface-base">
+      
+      {/* 2. Added Helmet for Homepage SEO */}
+      <Helmet>
+        <title>Kinetic Store | Premium Football Jerseys & Gear</title>
+        <meta name="description" content="Shop the latest 2024/25 football kits, retro classic jerseys, and premium fan gear at Kinetic Store. Engineered for performance, worn with passion." />
+        <meta property="og:title" content="Kinetic Store | Premium Football Jerseys" />
+        <meta property="og:description" content="Shop the latest 2024/25 football kits and premium fan gear at Kinetic Store." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={window.location.href} />
+        {/* If you have a specific banner image you want to show on WhatsApp, replace the URL below */}
+        <meta property="og:image" content="https://images.unsplash.com/photo-1518605368461-1ee7c532066d?q=80&w=1200&auto=format&fit=crop" />
+      </Helmet>
 
       {/* =========================================
           SECTION 1: HERO CAROUSEL
@@ -151,7 +164,8 @@ const HomePage = () => {
           ))}
         </div>
       </section>
-   {/* =========================================
+
+      {/* =========================================
           SECTION 3: SHOP BY CLUB (Collections)
       ========================================= */}
       {collections.length > 0 && (
@@ -201,7 +215,7 @@ const HomePage = () => {
                     <Link 
                       key={`club-${club.id}`} 
                       to={`/collection/${club.id}`} 
-                      className="group/card relative flex-none w-[280px] h-[380px] md:w-[320px] md:h-[420px] rounded-3xl  overflow-hidden snap-center bg-surface-deep border border-white/5 transition-all duration-500 hover:border-brand-primary/50 hover:shadow-[0_0_40px_rgba(194,243,91,0.1)]"
+                      className="group/card relative flex-none w-[280px] h-[380px] md:w-[320px] md:h-[420px] rounded-3xl overflow-hidden snap-center bg-surface-deep border border-white/5 transition-all duration-500 hover:border-brand-primary/50 hover:shadow-[0_0_40px_rgba(194,243,91,0.1)]"
                     >
                       {/* Image with scaling and brightening effect */}
                       <img 
@@ -259,6 +273,7 @@ const HomePage = () => {
           </div>
         </section>
       )}
+
       {/* =========================================
           SECTION 4: BEST SELLERS
       ========================================= */}

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { ShoppingCart, Zap, ArrowLeft, Ruler, ChevronDown, Share2, Check, Truck, ArrowLeftRight } from 'lucide-react';
+import { Helmet } from 'react-helmet-async'; // <-- 1. Imported Helmet
 import api from '../services/api';
 import { addItemToLocalCart, toggleCart } from '../features/cartSlice';
 import { useToast } from '../context/contextHook';
@@ -10,7 +11,6 @@ const ProductDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const { addToast } = useToast();
 
   const [product, setProduct] = useState(null);
@@ -33,14 +33,15 @@ const ProductDetailsPage = () => {
         const productData = response.data;
         setProduct(productData);
 
-        // Combine primary image and gallery array
-        const images = [productData.productImageUrl];
+        // Combine primary image and gallery array safely
+        const images = [];
+        if (productData.productImageUrl) images.push(productData.productImageUrl);
         if (productData.gallery && Array.isArray(productData.gallery)) {
           images.push(...productData.gallery);
         }
         
         // Filter out any empty/null values just in case
-        const cleanImages = images.filter(img => img);
+        const cleanImages = images.filter(Boolean);
         
         setAllImages(cleanImages);
         setActiveImage(cleanImages[0] || 'https://via.placeholder.com/600x800?text=Jersey+Image');
@@ -55,6 +56,7 @@ const ProductDetailsPage = () => {
   }, [id]);
 
   const handleAddToCart = async (isBuyNow) => {
+    setIsAdding(true);
     try {
       await api.post('/cart/add', { productId: product.id, quantity: 1, size: selectedSize });
   
@@ -75,6 +77,8 @@ const ProductDetailsPage = () => {
     } catch (error) {
       console.error("Failed to add to cart", error);
       addToast("Failed to add to cart", "error");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -115,8 +119,19 @@ const ProductDetailsPage = () => {
 
   return (
     <div className="px-6 pt-8 pb-20 w-full animate-in fade-in duration-500">
+      
+      {/* 2. Added Helmet for Dynamic SEO and Link Previews */}
+      <Helmet>
+        <title>{product.productName} | Kinetic Store</title>
+        <meta name="description" content={product.description || "Premium football gear available now at Kinetic Store."} />
+        <meta property="og:title" content={`${product.productName} | Kinetic Store`} />
+        <meta property="og:description" content={product.description || "Premium football gear available now at Kinetic Store."} />
+        <meta property="og:image" content={activeImage} />
+        <meta property="og:url" content={window.location.href} />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Helmet>
+
       <div className="max-w-6xl mx-auto">
-        
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors mb-8 font-inter text-sm uppercase tracking-wider">
           <ArrowLeft size={16} /> Back to Arena
         </button>
@@ -124,7 +139,7 @@ const ProductDetailsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-start">
           
           {/* --- LEFT COLUMN: IMAGE GALLERY --- */}
-          <div className="flex flex-col gap-4  top-24">
+          <div className="flex flex-col gap-4 sticky top-24">
             {/* Main Active Image */}
             <div className="relative aspect-[4/5] bg-surface-low rounded-2xl flex items-center justify-center p-10 overflow-hidden shadow-2xl border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-brand-primary/5 opacity-50 pointer-events-none"></div>
@@ -139,7 +154,7 @@ const ProductDetailsPage = () => {
                 src={activeImage} 
                 alt={product.productName}
                 className="w-full h-full object-contain relative z-10 animate-in fade-in zoom-in-95 duration-300"
-                key={activeImage} // Forces re-render animation when image changes
+                key={activeImage} 
               />
             </div>
 

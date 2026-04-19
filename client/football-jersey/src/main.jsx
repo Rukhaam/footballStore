@@ -2,6 +2,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
+import { HelmetProvider } from 'react-helmet-async'; // <-- 1. Import HelmetProvider
 import { store } from './app/store';
 import App from './App.jsx';
 import { ToastProvider } from './context/contextHook.jsx';
@@ -9,10 +10,12 @@ import '../src/index.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Provider store={store}>
-      <ToastProvider>
-      <App />
-      </ToastProvider>
-    </Provider>
+    <HelmetProvider> {/* <-- 2. Wrap your app structure */}
+      <Provider store={store}>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+      </Provider>
+    </HelmetProvider>
   </StrictMode>,
 );

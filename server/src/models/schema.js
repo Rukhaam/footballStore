@@ -1,4 +1,14 @@
-import { pgTable, serial, text, integer, timestamp, varchar, decimal, boolean, jsonb } from "drizzle-orm/pg-core"; 
+import {
+  pgTable,
+  serial,
+  text,
+  integer,
+  timestamp,
+  varchar,
+  decimal,
+  boolean,
+  jsonb,
+} from "drizzle-orm/pg-core";
 
 // 1. USERS
 export const users = pgTable("users", {
@@ -9,7 +19,7 @@ export const users = pgTable("users", {
   address: text("address"),
   pincode: varchar("pincode", { length: 10 }),
   phoneNumber: varchar("phone_number", { length: 15 }),
-  role: varchar("role", { length: 20 }).default("customer"), 
+  role: varchar("role", { length: 20 }).default("customer"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -17,13 +27,15 @@ export const users = pgTable("users", {
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   categoryName: varchar("category_name", { length: 100 }).notNull().unique(),
-  categoryUrl : text("category_url")
+  categoryUrl: text("category_url"),
 });
 
 // 3. COLLECTIONS (New Table! e.g., Real Madrid, Man United)
 export const collections = pgTable("collections", {
   id: serial("id").primaryKey(),
-  collectionName: varchar("collection_name", { length: 100 }).notNull().unique(),
+  collectionName: varchar("collection_name", { length: 100 })
+    .notNull()
+    .unique(),
   description: text("description"),
   logoUrl: text("logo_url"), // Optional: For rendering club crests
 });
@@ -34,20 +46,23 @@ export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   productName: varchar("product_name", { length: 255 }).notNull(),
   description: text("description"),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(), 
-  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), 
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }),
   stock: integer("stock").default(0).notNull(),
   categoryId: integer("category_id").references(() => categories.id),
-  collectionId: integer("collection_id").references(() => collections.id), 
+  collectionId: integer("collection_id").references(() => collections.id),
   productImageUrl: text("product_image_url"),
-  gallery: jsonb("gallery").default([]), 
+  gallery: jsonb("gallery").default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // 5. CART (Persistent Cart Session)
 export const cart = pgTable("cart", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).unique().notNull(),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .unique()
+    .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -55,8 +70,12 @@ export const cart = pgTable("cart", {
 // 6. CART ITEMS
 export const cartItems = pgTable("cart_items", {
   id: serial("id").primaryKey(),
-  cartId: integer("cart_id").references(() => cart.id).notNull(),
-  productId: integer("product_id").references(() => products.id).notNull(),
+  cartId: integer("cart_id")
+    .references(() => cart.id)
+    .notNull(),
+  productId: integer("product_id")
+    .references(() => products.id)
+    .notNull(),
   size: varchar("size", { length: 50 }), // <-- EXPANDED TO 50
   quantity: integer("quantity").notNull(),
   priceAtTime: decimal("price_at_time", { precision: 10, scale: 2 }).notNull(),
@@ -72,18 +91,25 @@ export const orders = pgTable("orders", {
   customerPhone: varchar("customer_phone", { length: 50 }), // Store guest phone
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(),
-  addressSnapshot: text("address_snapshot").notNull(), 
+  addressSnapshot: text("address_snapshot").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // 8. ORDER ITEMS (UPDATED to include the chosen size)
 export const orderItems = pgTable("order_items", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
-  productId: integer("product_id").references(() => products.id).notNull(),
+  orderId: integer("order_id")
+    .references(() => orders.id)
+    .notNull(),
+  productId: integer("product_id")
+    .references(() => products.id)
+    .notNull(),
   size: varchar("size", { length: 50 }), // <-- EXPANDED TO 50
   quantity: integer("quantity").notNull(),
-  priceAtPurchase: decimal("price_at_purchase", { precision: 10, scale: 2 }).notNull(),
+  priceAtPurchase: decimal("price_at_purchase", {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
 });
 
 // 9. CONTACTS (NEW TABLE FOR CONTACT US PAGE)
@@ -100,7 +126,9 @@ export const contacts = pgTable("contacts", {
 // PRODUCT SIZES
 export const productSizes = pgTable("product_sizes", {
   id: serial("id").primaryKey(),
-  productId: integer("product_id").references(() => products.id).notNull(),
+  productId: integer("product_id")
+    .references(() => products.id)
+    .notNull(),
   size: varchar("size", { length: 50 }).notNull(), // <-- EXPANDED TO 50
   stock: integer("stock").default(0).notNull(),
 });
@@ -108,7 +136,9 @@ export const productSizes = pgTable("product_sizes", {
 // 10. PAYMENTS (NEW TABLE)
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").references(() => orders.id).notNull(),
+  orderId: integer("order_id")
+    .references(() => orders.id)
+    .notNull(),
   razorpayPaymentId: varchar("razorpay_payment_id", { length: 255 }).notNull(),
   razorpayOrderId: varchar("razorpay_order_id", { length: 255 }).notNull(),
   razorpaySignature: varchar("razorpay_signature", { length: 255 }).notNull(),
@@ -122,7 +152,10 @@ export const promoCodes = pgTable("promo_codes", {
   id: serial("id").primaryKey(),
   code: varchar("code", { length: 50 }).notNull().unique(), // e.g., 'KINETIC20'
   discountType: varchar("discount_type", { length: 20 }).notNull(), // 'percentage' or 'fixed'
-  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(), // e.g., 20 for 20%, or 500 for ₹500 off
+  discountValue: decimal("discount_value", {
+    precision: 10,
+    scale: 2,
+  }).notNull(), // e.g., 20 for 20%, or 500 for ₹500 off
   maxUses: integer("max_uses"), // null means unlimited uses
   currentUses: integer("current_uses").default(0).notNull(),
   expiresAt: timestamp("expires_at"), // null means never expires
