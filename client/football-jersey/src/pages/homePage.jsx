@@ -168,18 +168,21 @@ const HomePage = () => {
       {/* =========================================
           SECTION 3: SHOP BY CLUB (Collections)
       ========================================= */}
+  {/* =========================================
+          SECTION 3: SHOP BY CLUB (Collections)
+      ========================================= */}
       {collections.length > 0 && (
         <section className="py-24 bg-surface-base border-b border-white/5 overflow-hidden">
           <div className="max-w-[1800px] mx-auto px-6">
             
             {/* Header */}
-            <div className="flex items-end justify-between mb-10">
+            <div className="flex items-end justify-between mb-12">
               <div>
-                <div className="flex items-center gap-2 text-brand-primary mb-2">
-                  <Shield size={20} />
-                  <span className="text-sm font-bold uppercase tracking-[0.2em]">Official Partners</span>
+                <div className="flex items-center gap-2 text-brand-primary mb-3">
+                  <Shield size={20} strokeWidth={2.5} />
+                  <span className="text-sm font-bold uppercase tracking-[0.2em] opacity-90">Official Partners</span>
                 </div>
-                <h2 className="kinetic-heading text-4xl md:text-5xl text-white uppercase tracking-widest">
+                <h2 className="kinetic-heading text-4xl md:text-5xl lg:text-6xl text-white uppercase tracking-wider drop-shadow-sm">
                   Shop By Club
                 </h2>
               </div>
@@ -191,54 +194,67 @@ const HomePage = () => {
               {/* Left Arrow */}
               <button 
                 onClick={scrollCollectionLeft} 
-                className="absolute -left-5 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-surface-deep/80 backdrop-blur-xl border border-white/10 text-white hover:bg-brand-primary hover:text-black hover:border-brand-primary hover:scale-110 transition-all duration-300 opacity-0 group-hover:opacity-100 hidden md:flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.8)]"
+                className="absolute -left-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-surface-deep/60 backdrop-blur-2xl border border-white/10 text-white hover:bg-brand-primary hover:text-black hover:border-brand-primary/50 hover:scale-110 transition-all duration-300 ease-out opacity-0 group-hover:opacity-100 hidden md:flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
               >
-                <ChevronLeft size={24} strokeWidth={2} />
+                <ChevronLeft size={24} strokeWidth={2.5} className="group-hover:-translate-x-0.5 transition-transform" />
               </button>
 
               {/* Edge Masking Wrapper */}
               <div 
                 className="w-full relative"
                 style={{
-                  WebkitMaskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)',
-                  maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)'
+                  WebkitMaskImage: 'linear-gradient(to right, transparent, black 3%, black 97%, transparent)',
+                  maskImage: 'linear-gradient(to right, transparent, black 3%, black 97%, transparent)'
                 }}
               >
                 {/* Scrollable Track */}
                 <div 
                   ref={collectionScrollRef}
                   onScroll={handleCollectionScroll}
-                  className="flex overflow-x-auto gap-10 pb-8 snap-x snap-mandatory scroll-smooth" 
+                  className="flex overflow-x-auto gap-8 pb-10 pt-4 snap-x snap-mandatory scroll-smooth" 
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   {collections.map((club) => (
                     <Link 
                       key={`club-${club.id}`} 
                       to={`/collection/${club.id}`} 
-                      className="group/card relative flex-none w-[280px] h-[380px] md:w-[320px] md:h-[420px] rounded-3xl overflow-hidden snap-center bg-surface-deep border border-white/5 transition-all duration-500 hover:border-brand-primary/50 hover:shadow-[0_0_40px_rgba(194,243,91,0.1)]"
+                      className="group/card relative flex-none w-[280px] h-[380px] md:w-[300px] md:h-[400px] rounded-3xl overflow-hidden snap-center bg-[#0d0d0d] border border-white/5 transition-all duration-500 ease-[cubic-bezier(0.33,1,0.68,1)] hover:border-brand-primary/30 hover:shadow-[0_10px_40px_rgba(194,243,91,0.15)] hover:-translate-y-2"
                     >
-                      {/* Image with scaling and brightening effect */}
-                      <img 
-                        src={club.logoUrl || club.logo_url || 'https://images.unsplash.com/photo-1518605368461-1ee7c532066d?q=80&w=800&auto=format&fit=crop'} 
-                        alt={club.collectionName} 
-                        className="absolute inset-0 w-20% h-full object-scale-down opacity-50 group-hover/card:opacity-70 transition-all duration-700 group-hover/card:scale-110 ease-[cubic-bezier(0.33,1,0.68,1)]"
-                      />
-                      
-                      {/* Dual Gradients for deep contrast */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/50 to-transparent"></div>
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0a0a0a] opacity-80 group-hover/card:opacity-100 transition-opacity duration-500"></div>
+                      {/* Background Ambient Glow */}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_0%,transparent_70%)] opacity-50 group-hover/card:opacity-100 transition-opacity duration-700"></div>
 
-                      <div className="absolute inset-0 p-8 flex flex-col justify-end z-10">
-                        <h3 className="kinetic-heading text-3xl text-white uppercase mb-2 group-hover/card:-translate-y-2 transition-transform duration-500 drop-shadow-lg">
+                      {/* Centered Logo Container */}
+                      <div className="absolute inset-0 flex items-center justify-center p-12 pb-24 z-0">
+                        <img 
+                          src={club.logoUrl || club.logo_url || 'https://images.unsplash.com/photo-1518605368461-1ee7c532066d?q=80&w=800&auto=format&fit=crop'} 
+                          alt={club.collectionName} 
+                          className="w-full h-full object-contain opacity-40 group-hover/card:opacity-80 transition-all duration-700 group-hover/card:scale-110 group-hover/card:drop-shadow-[0_0_25px_rgba(255,255,255,0.2)] ease-[cubic-bezier(0.33,1,0.68,1)]"
+                        />
+                      </div>
+                      
+                      {/* Deep Cinematic Gradient for Text */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent h-full z-10 opacity-90"></div>
+
+                      {/* Content Container */}
+                      <div className="absolute inset-x-0 bottom-0 p-8 flex flex-col justify-end z-20">
+                        <h3 className="kinetic-heading text-3xl md:text-2xl text-white uppercase mb-2 group-hover/card:-translate-y-1 transition-transform duration-500 ease-out drop-shadow-md">
                           {club.collectionName}
                         </h3>
-                        <p className="text-text-secondary text-sm font-inter line-clamp-2 mb-6 group-hover/card:-translate-y-2 transition-transform duration-500 delay-75">
+                        
+                        <p className="text-text-secondary text-sm font-inter line-clamp-2 mb-4 group-hover/card:-translate-y-1 transition-transform duration-500 delay-75 ease-out opacity-80">
                           {club.description || 'Explore the official collection.'}
                         </p>
                         
-                        {/* Animated Explore Tag */}
-                        <div className="flex items-center gap-2 text-brand-primary font-bold uppercase tracking-widest text-xs opacity-0 -translate-x-4 group-hover/card:opacity-100 group-hover/card:translate-x-0 transition-all duration-500 delay-150">
-                          Explore Gear <ArrowRight size={16} />
+                        {/* Animated Explore Button */}
+                        <div className="flex items-center gap-2 text-brand-primary font-bold uppercase tracking-[0.2em] text-xs mt-2 overflow-hidden">
+                          <span className="transform translate-y-full opacity-0 group-hover/card:translate-y-0 group-hover/card:opacity-100 transition-all duration-500 delay-100">
+                            Explore Gear
+                          </span>
+                          <ArrowRight 
+                            size={16} 
+                            strokeWidth={2.5} 
+                            className="transform -translate-x-4 opacity-0 group-hover/card:translate-x-0 group-hover/card:opacity-100 transition-all duration-500 delay-150" 
+                          />
                         </div>
                       </div>
                     </Link>
@@ -249,22 +265,22 @@ const HomePage = () => {
               {/* Right Arrow */}
               <button 
                 onClick={scrollCollectionRight} 
-                className="absolute -right-5 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-surface-deep/80 backdrop-blur-xl border border-white/10 text-white hover:bg-brand-primary hover:text-black hover:border-brand-primary hover:scale-110 transition-all duration-300 opacity-0 group-hover:opacity-100 hidden md:flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.8)]"
+                className="absolute -right-6 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-surface-deep/60 backdrop-blur-2xl border border-white/10 text-white hover:bg-brand-primary hover:text-black hover:border-brand-primary/50 hover:scale-110 transition-all duration-300 ease-out opacity-0 group-hover:opacity-100 hidden md:flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
               >
-                <ChevronRight size={24} strokeWidth={2} />
+                <ChevronRight size={24} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
 
             </div>
 
             {/* Dynamic Pagination Dots */}
-            <div className="flex justify-center gap-2 mt-2">
+            <div className="flex justify-center gap-2 mt-4">
               {[...Array(collectionDotCount)].map((_, index) => (
                 <div 
                   key={index} 
                   className={`transition-all duration-500 ease-out rounded-full h-1.5 ${
                     index === activeCollectionDotIndex 
-                      ? 'w-10 bg-brand-primary shadow-[0_0_10px_rgba(194,243,91,0.5)]' 
-                      : 'w-2 bg-white/20 hover:bg-white/40 cursor-pointer'
+                      ? 'w-10 bg-brand-primary shadow-[0_0_12px_rgba(194,243,91,0.6)]' 
+                      : 'w-2 bg-white/10 hover:bg-white/30 cursor-pointer'
                   }`} 
                 />
               ))}
@@ -292,7 +308,7 @@ const HomePage = () => {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {bestSellers.map(product => (
-              <div key={`best-${product.id}`} className="shrink-0 w-[75vw] sm:w-[45vw] md:w-auto snap-start">
+              <div key={`best-${product.id}`} className="shrink-0 w-[75vw] sm:w-[45vw] md:w-3xs snap-start">
                 <ProductCard product={product} />
               </div>
             ))}

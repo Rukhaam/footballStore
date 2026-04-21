@@ -16,6 +16,7 @@ import ContactPage from './pages/contactPage';
 import OrdersPage from './pages/ordersPage';
 import ForgotPasswordPage from './pages/forgotPasswordPage';
 import UpdatePasswordPage from './pages/updatePasswordPage';
+import ComingSoonPage from './pages/comingSoonPage';
 
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -71,6 +72,7 @@ function App() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/search" element={<SearchResultsPage />} /> {/* <-- Add the Route here! */}
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="*" element={<ComingSoonPage />} />
         </Route>
 
         {/* --- ROUTES WITHOUT NAVBAR & FOOTER --- */}

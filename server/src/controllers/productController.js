@@ -75,8 +75,30 @@ export const getProductById = async (req, res) => {
 
 export const getCategories = async (req, res) => {
   try {
-    const allCategories = await db.select().from(categories);
-    res.status(200).json(allCategories);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12; 
+    const offset = (page - 1) * limit;
+
+    // 1. Fetch the paginated categories
+    const categoryData = await db.select()
+      .from(categories)
+      .limit(limit)
+      .offset(offset);
+
+    // 2. Count total categories for the pagination object
+    const countResult = await db.select({ count: sql`count(*)` }).from(categories);
+    const totalItems = Number(countResult[0].count);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // 3. Return the structured response
+    res.status(200).json({
+      data: categoryData,
+      pagination: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalItems: totalItems
+      }
+    });
   } catch (error) {
     console.error("Fetch Categories Error:", error);
     res.status(500).json({ error: "Failed to fetch categories" });

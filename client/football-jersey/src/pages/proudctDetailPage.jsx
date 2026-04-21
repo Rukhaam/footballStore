@@ -141,8 +141,8 @@ const ProductDetailsPage = () => {
           {/* --- LEFT COLUMN: IMAGE GALLERY --- */}
           <div className="flex flex-col gap-4  top-24">
             {/* Main Active Image */}
-            <div className="relative aspect-[4/5] bg-surface-low rounded-2xl flex items-center justify-center p-10 overflow-hidden shadow-2xl border border-white/5">
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-brand-primary/5 opacity-50 pointer-events-none"></div>
+            <div className="relative aspect-[4/5]rounded-2xl flex items-center justify-center  overflow-hidden shadow-2xl border border-white/5">
+              <div className="absolute inset-0 opacity-50 pointer-events-none"></div>
               
               {isOnSale && (
                 <div className="absolute top-4 left-4 z-20 bg-red-500/90 backdrop-blur-md border border-red-400 text-white text-[10px] font-bold font-inter px-3 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg animate-pulse">

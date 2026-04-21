@@ -8,6 +8,7 @@ import { useToast } from '../context/contextHook';
 
 const ProductCard = ({ product }) => {
   const [isAdding, setIsAdding] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -49,109 +50,109 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  // Determine if the product is currently on sale
   const isOnSale = product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price);
+  
+  // Logic for Hover Image Swap
+  const primaryImage = product.productImageUrl || 'https://via.placeholder.com/600x800?text=Jersey+Image';
+  // Use the first image in the gallery array if available, otherwise stick to primary
+  const hoverImage = (product.gallery && product.gallery.length > 0) ? product.gallery[0] : primaryImage;
 
   return (
-    <div className="group relative flex flex-col bg-surface-low/40 backdrop-blur-sm border border-white/5 rounded-3xl overflow-hidden transition-all duration-500 hover:bg-surface-low hover:border-white/10 hover:shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
-      
-      {/* Dynamic Background Glow */}
-      <div className="absolute inset-0 bg-gradient-to-b from-brand-primary/0 via-brand-primary/0 to-brand-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+    <Link 
+      to={`/product/${product.id}`}
+      className="group relative flex flex-col aspect-[3/4] rounded-3xl overflow-hidden cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+      tabIndex="0"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setIsHovered(false)}
+      onTouchCancel={() => setIsHovered(false)}
+    >
+      {/* --- IMAGE LAYER --- */}
+      {/* Primary Image */}
+      <img 
+        src={primaryImage} 
+        alt={product.productName}
+        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-[cubic-bezier(0.33,1,0.68,1)] ${isHovered ? 'opacity-0 scale-105' : 'opacity-100 scale-100'}`}
+      />
+      {/* Hover/Secondary Image */}
+      <img 
+        src={hoverImage} 
+        alt={`${product.productName} alternate view`}
+        className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-[cubic-bezier(0.33,1,0.68,1)] ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+      />
 
-      {/* IMAGE CONTAINER */}
-      <Link 
-        to={`/product/${product.id}`} 
-        className="relative aspect-[3/4] bg-surface-deep/50 flex items-center justify-center p-10 overflow-hidden block cursor-pointer"
-      >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-white/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
-        
-        <img 
-          src={product.productImageUrl || 'https://via.placeholder.com/400x500?text=Jersey+Image'} 
-          alt={product.productName}
-          className="w-full h-full object-contain relative z-10 transition-all duration-700 ease-[cubic-bezier(0.33,1,0.68,1)] group-hover:scale-110 group-hover:-rotate-3 group-hover:drop-shadow-[0_20px_20px_rgba(0,0,0,0.5)]"
-        />
-        
-        {/* SALE BADGE (NEW) */}
+      {/* --- GRADIENT OVERLAYS --- */}
+      {/* Top Gradient for Badges */}
+      <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black/60 to-transparent pointer-events-none"></div>
+      
+      {/* Bottom Deep Gradient for Text Legibility */}
+      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none transition-opacity duration-500 group-hover:from-[#0a0a0a]/95"></div>
+
+      {/* --- FLOATING BADGES (TOP RIGHT) --- */}
+      <div className="absolute top-5 right-5 flex flex-col gap-2 items-end z-20">
         {isOnSale && (
-          <div className="absolute top-4 right-4 z-20 bg-red-500/90 backdrop-blur-md border border-red-400 text-white text-[10px] font-bold font-inter px-3 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg animate-pulse">
+          <div className="bg-red-500/90 backdrop-blur-md text-white text-[10px] font-bold font-inter px-3 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg animate-pulse">
             Sale
           </div>
         )}
-
-        {/* Low Stock Badge */}
         {product.stock < 10 && product.stock > 0 && !isOnSale && (
-          <div className="absolute top-4 right-4 z-20 bg-red-500/10 backdrop-blur-md border border-red-500/30 text-red-400 text-[10px] font-bold font-inter px-3 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg">
+          <div className="bg-red-500/10 backdrop-blur-md border border-red-500/30 text-red-400 text-[10px] font-bold font-inter px-3 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg">
             Low Stock
           </div>
         )}
-
-        {/* Sold Out Badge */}
         {product.stock === 0 && (
-          <div className="absolute top-4 right-4 z-20 bg-surface-high/80 backdrop-blur-md border border-white/20 text-text-secondary text-[10px] font-bold font-inter px-3 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg">
+          <div className="bg-black/60 backdrop-blur-md border border-white/20 text-text-secondary text-[10px] font-bold font-inter px-3 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg">
             Sold Out
           </div>
         )}
+      </div>
 
-        {/* "View Product" Overlay */}
-        <div className="absolute inset-x-0 bottom-6 flex justify-center z-20 translate-y-10 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out">
-          <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 text-white text-xs font-bold uppercase tracking-widest px-5 py-2.5 rounded-full">
-            View Gear <ArrowRight size={14} />
-          </div>
-        </div>
-      </Link>
-
-      {/* DETAILS CONTAINER */}
-      <div className="p-7 flex flex-col flex-grow justify-between relative z-20">
-        <div>
-          <Link to={`/product/${product.id}`}>
-            <h3 className="kinetic-heading text-2xl leading-tight mb-3 text-white group-hover:text-brand-primary transition-colors cursor-pointer line-clamp-1">
-              {product.productName}
-            </h3>
-          </Link>
-          <p className="kinetic-body text-sm text-text-secondary line-clamp-2 mb-6">
-            {product.description || 'Premium athletic fit engineered for peak performance.'}
-          </p>
-        </div>
+      {/* --- CONTENT LAYER (BOTTOM) --- */}
+      <div className="absolute inset-x-0 bottom-0 p-6 flex items-end justify-between z-20">
         
-        <div className="flex items-center justify-between mt-auto pt-5 border-t border-white/5">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-0.5">Price</span>
-            
-            {/* UPDATED PRICE LOGIC */}
-            <div className="flex items-end gap-2">
-              <span className="font-inter font-black text-xl text-white tracking-tight">
-                ₹{parseFloat(product.price).toFixed(2)}
+        {/* Text Information */}
+        <div className="flex flex-col max-w-[70%]">
+          <h3 className="kinetic-heading text-2xl md:text-3xl leading-none text-white drop-shadow-md group-hover:-translate-y-1 transition-transform duration-500 line-clamp-2 mb-2">
+            {product.productName}
+          </h3>
+          
+          {/* Price Block */}
+          <div className="flex items-center gap-2 group-hover:-translate-y-1 transition-transform duration-500 delay-75">
+            <span className="font-inter font-black text-xl text-brand-primary tracking-tight drop-shadow-sm">
+              ₹{parseFloat(product.price).toFixed(2)}
+            </span>
+            {isOnSale && (
+              <span className="font-inter font-bold text-sm text-text-secondary line-through">
+                ₹{parseFloat(product.originalPrice).toFixed(2)}
               </span>
-              
-              {/* Show original crossed-out price if on sale */}
-              {isOnSale && (
-                <span className="font-inter font-bold text-xs text-red-400/60 line-through mb-1">
-                  ₹{parseFloat(product.originalPrice).toFixed(2)}
-                </span>
-              )}
-            </div>
-            
+            )}
           </div>
           
-          {/* Add to Cart Button */}
-          <button 
-            onClick={handleAddToCart}
-            disabled={isAdding || product.stock === 0}
-            className="group/btn relative flex items-center justify-center h-12 w-12 flex-shrink-0 rounded-full bg-surface-high border border-white/5 text-white hover:bg-brand-primary hover:border-brand-primary hover:text-black transition-all duration-300 ease-out disabled:opacity-50 disabled:hover:w-12 disabled:hover:bg-surface-high disabled:hover:text-white disabled:hover:border-white/5 overflow-hidden shadow-lg"
-            aria-label="Add to cart"
-          >
-            {isAdding ? (
-              <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-            ) : (
-              <>
-                <ShoppingCart size={18} className="absolute group-hover/btn:opacity-0 transition-opacity duration-200" />
-            
-              </>
-            )}
-          </button>
+          {/* Slide-in Action Text (Hover Only) */}
+          <div className="overflow-hidden mt-1">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70 -translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+              View Details <ArrowRight size={14} />
+            </p>
+          </div>
         </div>
+
+        {/* Floating Action Button */}
+        <button 
+          onClick={handleAddToCart}
+          disabled={isAdding || product.stock === 0}
+          className="relative flex items-center justify-center h-14 w-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-brand-primary hover:border-brand-primary hover:text-black hover:scale-110 active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-white/10 disabled:hover:text-white disabled:hover:border-white/20 shadow-2xl z-30 mb-2"
+          aria-label="Add to cart"
+        >
+          {isAdding ? (
+            <div className="w-5 h-5 border-2 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin"></div>
+          ) : (
+            <ShoppingCart size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          )}
+        </button>
+
       </div>
-    </div>
+    </Link>
   );
 };
 

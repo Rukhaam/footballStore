@@ -49,13 +49,12 @@ const AuthPage = () => {
     setLoading(true);
     setErrorMsg("");
 
-    // --- 1. Basic Sanitization ---
+    
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
     const cleanFullName = fullName.trim();
 
     try {
-      // --- 2. Input Validation (Only run on Registration) ---
       if (!isLogin) {
         if (!NAME_REGEX.test(cleanFullName)) {
           throw new Error("Please enter a valid full name (letters only).");
@@ -77,7 +76,6 @@ const AuthPage = () => {
         }
       }
 
-      // --- 3. Authentication Execution ---
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
@@ -88,14 +86,11 @@ const AuthPage = () => {
         dispatch(setUser(data.user));
         navigate("/");
       } else {
-        // Check if email exists in your custom backend
         const { data: checkData } = await api.get(`/user/check-email/${cleanEmail}`);
 
         if (checkData.exists) {
           throw new Error("This email is already registered in the Arena.");
         }
-
-        // Register with Supabase
         const { error: signUpError } = await supabase.auth.signUp({
           email: cleanEmail,
           password: cleanPassword,
@@ -108,7 +103,6 @@ const AuthPage = () => {
 
         addToast("Registration successful! Welcome to the club. Please log in.", "success");
         setIsLogin(true);
-        // Clear fields after successful registration
         setPassword("");
         setFullName("");
       }

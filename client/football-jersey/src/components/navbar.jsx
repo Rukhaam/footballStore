@@ -23,11 +23,16 @@ const Navbar = () => {
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
-  useEffect(() => {
+  // Pagination implementation for fetching categories
+useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await api.get('/store/categories');
-        setCategories(res.data);
+        // Fetch page 1 with a limit of 8 (perfect for a 4-column mega menu)
+        const res = await api.get('/store/categories?page=1&limit=8');
+        
+        // Since the backend now sends { data: [...], pagination: {...} }
+        // We set our state to res.data.data
+        setCategories(res.data.data); 
       } catch (err) {
         console.error("Failed to fetch categories", err);
       }
@@ -47,7 +52,6 @@ const Navbar = () => {
     setTimeout(() => setShowMobileCategories(false), 300); 
   };
 
-  // Helper to open search from mobile menu
   const handleMobileSearch = () => {
     closeMobileMenu();
     dispatch(toggleSearch());
@@ -125,10 +129,10 @@ const Navbar = () => {
           {/* Icons (Right Side) */}
           <div className="flex items-center gap-2 md:gap-4">
             
-            {/* Search Icon (Visible to Everyone) */}
+            {/* Search Icon */}
             <button 
               onClick={() => dispatch(toggleSearch())} 
-              className="p-2 text-text-secondary hover:text-white transition-colors hidden md:block" // Hidden on mobile, added to sidebar instead
+              className="p-2 text-text-secondary hover:text-white transition-colors hidden md:block"
               title="Search"
             >
               <Search size={22} />
@@ -150,7 +154,6 @@ const Navbar = () => {
               </div>
             ) : (
               <>
-                {/* Mobile Cart Icon for Guests */}
                 <button onClick={() => dispatch(toggleCart())} className="md:hidden relative p-2 text-text-secondary hover:text-white transition-colors">
                   <ShoppingCart size={24} />
                   {cartCount > 0 && (
@@ -189,7 +192,6 @@ const Navbar = () => {
                 Home
               </Link>
               
-              {/* Search Mobile Button */}
               <button onClick={handleMobileSearch} className="flex items-center justify-between py-4 text-xl kinetic-heading text-white border-b border-white/5 group">
                 Search
                 <div className="bg-white/5 p-2 rounded-full group-hover:bg-brand-primary/20 transition-colors">
