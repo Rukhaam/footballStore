@@ -12,12 +12,10 @@ export const applyCatalogDiscount = async (req, res) => {
 
     const multiplier = (100 - discountPercentage) / 100;
 
-    // STEP 1: Pure Drizzle way to backup the original price
+
     await db.update(products)
       .set({ originalPrice: products.price })
       .where(isNull(products.originalPrice));
-
-    // STEP 2: Build the dynamic WHERE condition using Drizzle operators
     let condition;
     if (targetType === 'product') {
       condition = eq(products.id, targetId);
@@ -35,7 +33,6 @@ export const applyCatalogDiscount = async (req, res) => {
     };
 
     if (targetType === 'all') {
-      // Updates the whole table
       await db.update(products).set(updatePayload); 
     } else {
       // Updates only the matching rows

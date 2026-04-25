@@ -22,7 +22,7 @@ export const getCart = async (req, res) => {
       cartItemId: cartItems.id,
       quantity: cartItems.quantity,
       priceAtTime: cartItems.priceAtTime,
-      size: cartItems.size, // <--- THE BUG WAS HERE: Size wasn't being sent to the frontend!
+      size: cartItems.size,
       product: {
         id: products.id,
         name: products.productName,
@@ -50,14 +50,13 @@ export const addToCart = async (req, res) => {
 
     const currentCart = await getUserCart(req.user.supabaseId);
     
-    // We must also check for size when looking for an existing item to stack quantities properly
     const existingItem = await db.select()
       .from(cartItems)
       .where(
         and(
           eq(cartItems.cartId, currentCart.id), 
           eq(cartItems.productId, productId),
-          size ? eq(cartItems.size, size) : true // Ensures sizes don't mix up
+          size ? eq(cartItems.size, size) : true 
         )
       );
 

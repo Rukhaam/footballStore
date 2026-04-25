@@ -5,7 +5,7 @@ import { requireAdmin } from '../middlewares/adminMiddleware.js';
 
 const router = express.Router();
 
-router.post('/validate-promo', validatePromoCode); // user route
+router.post('/validate-promo', validatePromoCode); 
 
 router.use(requireAuth, requireAdmin);
 router.get('/', getAllPromoCodes);

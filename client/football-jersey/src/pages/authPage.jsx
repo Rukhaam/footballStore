@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setUser } from "../features/authSlice";
 import { supabase } from "../services/supabaseClient";
-import api from "../services/api";
 import {
   Mail,
   Lock,
@@ -14,7 +13,6 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useToast } from "../context/contextHook";
-
 
 const ALLOWED_DOMAINS = [
   "gmail.com",
@@ -49,7 +47,6 @@ const AuthPage = () => {
     setLoading(true);
     setErrorMsg("");
 
-    
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
     const cleanFullName = fullName.trim();
@@ -86,12 +83,7 @@ const AuthPage = () => {
         dispatch(setUser(data.user));
         navigate("/");
       } else {
-        const { data: checkData } = await api.get(`/user/check-email/${cleanEmail}`);
-
-        if (checkData.exists) {
-          throw new Error("This email is already registered in the Arena.");
-        }
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email: cleanEmail,
           password: cleanPassword,
           options: {
@@ -99,7 +91,12 @@ const AuthPage = () => {
           },
         });
 
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+           if (signUpError.message.toLowerCase().includes("already registered")) {
+             throw new Error("This email is already registered in the Arena.");
+           }
+           throw signUpError;
+        }
 
         addToast("Registration successful! Welcome to the club. Please log in.", "success");
         setIsLogin(true);

@@ -143,7 +143,7 @@ export const getProductsByCategory = async (req, res) => {
   }
 };
 
-// --- UPDATED: Added Pagination to getCollectionById ---
+// --- to getCollectionById ---
 export const getCollectionById = async (req, res) => {
   try {
     const { id } = req.params;

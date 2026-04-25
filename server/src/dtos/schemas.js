@@ -12,7 +12,7 @@ export const addToCartDTO = z.object({
   quantity: z.number().int().min(1, "Quantity must be at least 1"),
 });
 
-// FIXED: Now Zod will allow the cartItems and guest data through!
+
 export const checkoutDTO = z.object({
   addressSnapshot: z.string(),
   customerDetails: z.object({
