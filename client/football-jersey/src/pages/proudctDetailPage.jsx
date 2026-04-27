@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { ShoppingCart, Zap, ArrowLeft, Ruler, ChevronDown, Share2, Check, Truck, ArrowLeftRight } from 'lucide-react';
 import { Helmet } from 'react-helmet-async'; // <-- 1. Imported Helmet
 import api from '../services/api';
 import { addItemToLocalCart, toggleCart } from '../features/cartSlice';
 import { useToast } from '../context/contextHook';
+import { getProductSlug } from '../utils/slugify';
 
 const ProductDetailsPage = () => {
-  const { id } = useParams();
+  const { productSlug } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { addToast } = useToast();
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,9 +31,14 @@ const ProductDetailsPage = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await api.get(`/store/${id}`); 
+        const response = await api.get(`/store/${productSlug}`);
         const productData = response.data;
         setProduct(productData);
+
+        const canonicalSlug = getProductSlug(productData);
+        if (canonicalSlug && canonicalSlug !== productSlug) {
+          navigate(`/product/${canonicalSlug}`, { replace: true });
+        }
 
         // Combine primary image and gallery array safely
         const images = [];
@@ -53,17 +60,31 @@ const ProductDetailsPage = () => {
       }
     };
     fetchProduct();
-  }, [id]);
+  }, [productSlug, navigate]);
 
   const handleAddToCart = async (isBuyNow) => {
     setIsAdding(true);
     try {
-      await api.post('/cart/add', { productId: product.id, quantity: 1, size: selectedSize });
+      const sizeLabel = selectedSize?.size ? String(selectedSize.size).trim().toUpperCase() : null;
+
+      if (!sizeLabel) {
+        addToast("Please select a size first", "error");
+        return;
+      }
+
+      if (isAuthenticated) {
+        await api.post('/cart/add', { productId: product.id, quantity: 1, size: sizeLabel });
+      }
   
       dispatch(addItemToLocalCart({
-        product: product, 
+        cartItemId: `${isAuthenticated ? 'temp' : 'guest'}-${product.id}-${sizeLabel}`,
+        product: {
+          id: product.id,
+          name: product.productName,
+          imageUrl: product.productImageUrl
+        }, 
         quantity: 1,
-        size: selectedSize,
+        size: sizeLabel,
         priceAtTime: product.price
       }));
       
@@ -76,7 +97,7 @@ const ProductDetailsPage = () => {
       }
     } catch (error) {
       console.error("Failed to add to cart", error);
-      addToast("Failed to add to cart", "error");
+      addToast(error.response?.data?.error || "Failed to add to cart", "error");
     } finally {
       setIsAdding(false);
     }

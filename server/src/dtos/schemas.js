@@ -14,15 +14,16 @@ export const addToCartDTO = z.object({
 
 
 export const checkoutDTO = z.object({
-  addressSnapshot: z.string(),
+  addressSnapshot: z.string().optional(),
   customerDetails: z.object({
-    fullName: z.string(),
-    email: z.string().email(),
-    phone: z.string(),
-    address: z.string(),
-    city: z.string(),
-    postalCode: z.string()
-  }).optional().nullable(),
-  cartItems: z.array(z.any()), 
-  isGuest: z.boolean()
+    fullName: z.string().trim().min(2).max(100),
+    email: z.string().trim().email().max(255),
+    phone: z.string().trim().min(7).max(20),
+    address: z.string().trim().min(5).max(120),
+    city: z.string().trim().min(2).max(60),
+    postalCode: z.string().trim().min(3).max(20)
+  }).passthrough(),
+  cartItems: z.array(z.any()).min(1, 'Cart cannot be empty'),
+  isGuest: z.boolean().optional(),
+  promoCode: z.string().trim().min(1).max(50).optional().nullable()
 }).passthrough();

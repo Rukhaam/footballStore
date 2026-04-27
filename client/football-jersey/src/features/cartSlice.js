@@ -1,21 +1,65 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+export const CART_STORAGE_KEY = 'kinetic-arena-cart';
+
+const parseSize = (rawSize) => {
+  if (!rawSize) return null;
+  if (typeof rawSize === 'object') return parseSize(rawSize.size);
+  if (typeof rawSize === 'string' && rawSize.startsWith('{')) {
+    try {
+      return parseSize(JSON.parse(rawSize).size);
+    } catch {
+      return rawSize.trim().toUpperCase() || null;
+    }
+  }
+
+  const clean = String(rawSize).trim().toUpperCase();
+  return clean || null;
+};
+
+const getProductId = (item) => item.product?.id || item.productId || item.id;
+
+export const normalizeCartItem = (item) => {
+  const product = item.product || item;
+  const productId = getProductId(item);
+  const quantity = Number.parseInt(item.quantity, 10);
+
+  return {
+    ...item,
+    quantity: Number.isInteger(quantity) && quantity > 0 ? quantity : 1,
+    size: parseSize(item.size || item.product?.size),
+    priceAtTime: item.priceAtTime ?? product.price ?? item.price ?? 0,
+    product: {
+      ...product,
+      id: productId,
+      name: product.name || product.productName || item.productName || 'Jersey',
+      imageUrl: product.imageUrl || product.productImageUrl || item.productImageUrl || ''
+    }
+  };
+};
+
+export const loadCartItemsFromStorage = () => {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const savedItems = JSON.parse(window.localStorage.getItem(CART_STORAGE_KEY) || '[]');
+    return Array.isArray(savedItems) ? savedItems.map(normalizeCartItem) : [];
+  } catch {
+    return [];
+  }
+};
+
 const initialState = {
-  items: [],
+  items: loadCartItemsFromStorage(),
   isOpen: false,
 };
 
-// --- THE FIX: A bulletproof matcher that ignores Data Type mismatches ---
 const isMatch = (item, targetProductId, targetSize) => {
-  // 1. Find the ID whether it is nested (item.product.id) or flat (item.id)
-  const currentId = item.product?.id || item.productId || item.id;
-  // 2. Find the size whether it is nested or flat
-  const currentSize = item.size || item.product?.size;
+  const currentId = getProductId(item);
+  const currentSize = parseSize(item.size || item.product?.size);
 
-  // 3. Force everything to Strings to prevent Number vs String bugs
   const idMatches = String(currentId) === String(targetProductId);
-  // 4. Fallback to empty strings to prevent 'null' vs 'undefined' bugs
-  const sizeMatches = String(currentSize || '') === String(targetSize || '');
+  const sizeMatches = String(currentSize || '') === String(parseSize(targetSize) || '');
 
   return idMatches && sizeMatches;
 };
@@ -25,15 +69,17 @@ const cartSlice = createSlice({
   initialState,
   reducers: {
     setCartItems: (state, action) => {
-      state.items = action.payload;
+      state.items = Array.isArray(action.payload)
+        ? action.payload.map(normalizeCartItem)
+        : [];
     },
     toggleCart: (state) => {
       state.isOpen = !state.isOpen;
     },
     addItemToLocalCart: (state, action) => {
-      const newItem = action.payload;
-      const newItemSize = newItem.size || newItem.product?.size;
-      const newItemId = newItem.product?.id || newItem.id;
+      const newItem = normalizeCartItem(action.payload);
+      const newItemSize = newItem.size;
+      const newItemId = getProductId(newItem);
 
       const existingItemIndex = state.items.findIndex((item) =>
         isMatch(item, newItemId, newItemSize)
@@ -42,7 +88,6 @@ const cartSlice = createSlice({
       if (existingItemIndex >= 0) {
         state.items[existingItemIndex].quantity += newItem.quantity;
       } else {
-        // Force the size to the top level for consistency
         state.items.push({ ...newItem, size: newItemSize });
       }
     },

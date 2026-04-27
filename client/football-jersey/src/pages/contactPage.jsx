@@ -102,9 +102,9 @@ const ContactPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-start">
           
           {/* LEFT COLUMN: Contact Information */}
-          <div className="flex flex-col gap-10">
-            <div className="bg-surface-low border border-white/5 p-8 rounded-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 blur-[50px] group-hover:bg-brand-primary/10 transition-colors"></div>
+          <div className="flex flex-col justify-center items-center gap-10">
+            <div className="bg-surface-low border border-white/5 p-3 md:p-8 rounded-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32  bg-brand-primary/5 blur-[50px] group-hover:bg-brand-primary/10 transition-colors"></div>
               
               <h3 className="kinetic-heading text-2xl text-white uppercase mb-8">Contact Information</h3>
               

@@ -44,16 +44,20 @@ export const optionalAuth = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     const { data, error } = await supabase.auth.getUser(token);
-    if (!error && data?.user) {
-      req.user = {
-        supabaseId: data.user.id,
-        email: data.user.email,
-        role: data.user.role 
-      };
+    if (error || !data?.user) {
+      console.error("ðŸ”´ Optional Auth Rejected:", error?.message);
+      return res.status(403).json({ error: 'Forbidden: Invalid or expired token' });
     }
+
+    req.user = {
+      supabaseId: data.user.id,
+      email: data.user.email,
+      role: data.user.role 
+    };
 
     next();
   } catch (err) {
-    next(); 
+    console.error("ðŸ”´ Optional Auth Error:", err.message);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 };

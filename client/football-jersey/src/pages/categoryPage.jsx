@@ -1,30 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Helmet } from 'react-helmet-async'; // <-- 1. Imported Helmet
 import api from '../services/api';
 import ProductCard from '../components/productCard';
+import { slugify } from '../utils/slugify';
+
+const ProductCardSkeleton = () => (
+  <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-surface-low animate-pulse">
+    <div className="h-64 w-full bg-surface-high/70" />
+    <div className="p-4 space-y-3">
+      <div className="h-4 w-3/4 rounded bg-surface-high/80" />
+      <div className="h-3 w-1/2 rounded bg-surface-high/70" />
+      <div className="h-6 w-1/3 rounded bg-surface-high/80" />
+    </div>
+  </div>
+);
 
 const CategoryPage = () => {
-  const { categoryId } = useParams();
+  const { categorySlug } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState({ category: null, products: [] });
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalItems: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, currentPage: 1 }));
-  }, [categoryId]);
+  }, [categorySlug]);
 
   useEffect(() => {
     const fetchCategoryData = async () => {
       setLoading(true);
       try {
-        const response = await api.get(`/store/category/${categoryId}?page=${pagination.currentPage}&limit=15`);
+        const response = await api.get(`/store/category/${categorySlug}?page=${pagination.currentPage}&limit=15`);
         setData({
           category: response.data.category,
           products: response.data.products
         });
         setPagination(response.data.pagination);
+
+        const canonicalSlug = slugify(response.data.category?.categoryName || '');
+        if (canonicalSlug && categorySlug !== canonicalSlug) {
+          navigate(`/category/${canonicalSlug}`, { replace: true });
+        }
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (error) {
         console.error("Failed to load category data:", error);
@@ -33,7 +52,7 @@ const CategoryPage = () => {
       }
     };
     fetchCategoryData();
-  }, [categoryId, pagination.currentPage]);
+  }, [categorySlug, pagination.currentPage, navigate]);
 
   const handleNextPage = () => {
     if (pagination.currentPage < pagination.totalPages) {
@@ -49,8 +68,15 @@ const CategoryPage = () => {
 
   if (loading && !data.category) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-surface-high border-t-brand-primary rounded-full animate-spin"></div>
+      <div className="px-6 pt-12 pb-24 w-full max-w-7xl mx-auto">
+        <div className="mb-12 border-b border-white/10 pb-6">
+          <div className="h-10 w-72 max-w-full rounded bg-surface-low animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[50vh]">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <ProductCardSkeleton key={`category-initial-skeleton-${index}`} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -101,7 +127,13 @@ const CategoryPage = () => {
       </div>
 
       {/* Product Grid */}
-      {data.products.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[50vh]">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <ProductCardSkeleton key={`category-grid-skeleton-${index}`} />
+          ))}
+        </div>
+      ) : data.products.length === 0 ? (
         <div className="text-center text-text-secondary font-inter py-20 bg-surface-low rounded-xl border border-white/5">
           No products found in this category yet. Check back soon!
         </div>

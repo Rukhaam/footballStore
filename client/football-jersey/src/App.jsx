@@ -21,10 +21,14 @@ import ComingSoonPage from './pages/comingSoonPage';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
+import AdminCategories from './pages/admin/AdminCategories';
+import AdminCollections from './pages/admin/AdminCollections';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminOrderDetail from './pages/admin/AdminOrderDetail';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminProtectedRoute from './components/admin/AdminProtectedRoute';
+import { ScrollToTopOnRouteChange } from './hooks/useScrollToTop';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -48,6 +52,7 @@ function App() {
     <>
       <Toaster position="top-right" toastOptions={{ style: { background: '#181A1B', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } }} />
       <Router>
+      <ScrollToTopOnRouteChange />
       <Routes>
         {/* Admin Login */}
         <Route path="/admin/login" element={!isAuthenticated ? <AdminLogin /> : <Navigate to="/admin/dashboard" />} />
@@ -58,16 +63,19 @@ function App() {
             <Route index element={<Navigate to="dashboard" />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="products" element={<AdminProducts />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="collections" element={<AdminCollections />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="orders/:orderId" element={<AdminOrderDetail />} />
             <Route path="coupons" element={<AdminCoupons />} />
           </Route>
         </Route>
 
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/product/:id" element={<ProductDetailsPage />} />
-          <Route path="/category/:categoryId" element={<CategoryPage />} />
-          <Route path="/collection/:id" element={<CollectionPage />} />
+          <Route path="/product/:productSlug" element={<ProductDetailsPage />} />
+          <Route path="/category/:categorySlug" element={<CategoryPage />} />
+          <Route path="/collection/:collectionSlug" element={<CollectionPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/search" element={<SearchResultsPage />} /> {/* <-- Add the Route here! */}

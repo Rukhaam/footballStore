@@ -1,53 +1,21 @@
 import React, { useState } from 'react';
 import { ShoppingCart, ArrowRight } from 'lucide-react';
-import api from '../services/api';
-import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { addItemToLocalCart } from '../features/cartSlice';
 import { useToast } from '../context/contextHook';
+import { getProductSlug } from '../utils/slugify';
 
 const ProductCard = ({ product }) => {
-  const [isAdding, setIsAdding] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const productSlug = getProductSlug(product);
 
-  const handleAddToCart = async (e) => {
+  const handleAddToCart = (e) => {
     e.preventDefault(); 
     e.stopPropagation(); 
-    
-    if (!isAuthenticated) {
-      navigate('/auth');
-      return;
-    }
 
-    setIsAdding(true);
-    try {
-      await api.post('/cart/add', {
-        productId: product.id,
-        quantity: 1,
-      });
-      
-      dispatch(addItemToLocalCart({
-        cartItemId: `temp-${Date.now()}`, 
-        quantity: 1,
-        priceAtTime: product.price,
-        product: {
-          id: product.id,
-          name: product.productName,
-          imageUrl: product.productImageUrl
-        }
-      }));
-      addToast('Gear added to your cart!', 'success');
-
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-      addToast('Could not add item to cart.', 'error');
-    } finally {
-      setIsAdding(false);
-    }
+    addToast('Choose a size to add this gear.', 'success');
+    navigate(`/product/${productSlug}`);
   };
 
   const isOnSale = product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price);
@@ -59,7 +27,7 @@ const ProductCard = ({ product }) => {
 
   return (
     <Link 
-      to={`/product/${product.id}`}
+      to={`/product/${productSlug}`}
       className="group relative flex flex-col aspect-[3/4] rounded-3xl overflow-hidden cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
       tabIndex="0"
       onMouseEnter={() => setIsHovered(true)}
@@ -140,15 +108,11 @@ const ProductCard = ({ product }) => {
         {/* Floating Action Button */}
         <button 
           onClick={handleAddToCart}
-          disabled={isAdding || product.stock === 0}
+          disabled={product.stock === 0}
           className="relative flex items-center justify-center h-14 w-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white hover:bg-brand-primary hover:border-brand-primary hover:text-black hover:scale-110 active:scale-95 transition-all duration-300 ease-[cubic-bezier(0.33,1,0.68,1)] disabled:opacity-50 disabled:hover:scale-100 disabled:hover:bg-white/10 disabled:hover:text-white disabled:hover:border-white/20 shadow-2xl z-30 mb-2"
-          aria-label="Add to cart"
+          aria-label="Select size"
         >
-          {isAdding ? (
-            <div className="w-5 h-5 border-2 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin"></div>
-          ) : (
-            <ShoppingCart size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          )}
+          <ShoppingCart size={20} strokeWidth={2.5} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </button>
 
       </div>

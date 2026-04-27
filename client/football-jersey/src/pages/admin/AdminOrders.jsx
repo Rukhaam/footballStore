@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Package, RefreshCw, ShoppingBag } from 'lucide-react';
+import { Eye, Package, RefreshCw, ShoppingBag } from 'lucide-react';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -40,6 +41,7 @@ const AdminOrders = () => {
   const getStatusStyles = (status) => {
     switch (status) {
       case 'pending': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'paid': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'processing': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
       case 'shipped': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
       case 'delivered': return 'bg-brand-primary/10 text-brand-primary border-brand-primary/20';
@@ -88,6 +90,7 @@ const AdminOrders = () => {
                   <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-widest">Customer</th>
                   <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-widest">Amount</th>
                   <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-widest">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,6 +124,14 @@ const AdminOrders = () => {
                           ▼
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link
+                        to={`/admin/orders/${order.id}`}
+                        className="inline-flex items-center gap-2 text-xs uppercase tracking-wider font-bold px-3 py-2 rounded-full border border-white/10 text-text-secondary hover:text-white hover:border-brand-primary/40 transition-colors"
+                      >
+                        <Eye size={14} /> View
+                      </Link>
                     </td>
                   </tr>
                 ))}

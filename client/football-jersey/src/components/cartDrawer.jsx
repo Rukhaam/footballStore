@@ -5,6 +5,19 @@ import { X, Trash2, ShoppingBag, Plus, Minus } from 'lucide-react';
 import { toggleCart, setCartItems, updateItemQuantityLocal, removeItemFromLocalCart } from '../features/cartSlice';
 import api from '../services/api';
 
+const parseSize = (rawSize) => {
+  if (!rawSize) return null;
+  if (typeof rawSize === 'object') return parseSize(rawSize.size);
+  if (typeof rawSize === 'string' && rawSize.startsWith('{')) {
+    try {
+      return parseSize(JSON.parse(rawSize).size);
+    } catch {
+      return rawSize.trim().toUpperCase() || null;
+    }
+  }
+  return String(rawSize).trim().toUpperCase() || null;
+};
+
 const CartDrawer = () => {
   const navigate = useNavigate(); 
   const dispatch = useDispatch();
@@ -120,7 +133,9 @@ const CartDrawer = () => {
       }
 
       try {
-        const endpoint = size ? `/cart/remove/${productId}?size=${size}` : `/cart/remove/${productId}`;
+        const endpoint = size
+          ? `/cart/remove/${productId}?size=${encodeURIComponent(size)}`
+          : `/cart/remove/${productId}`;
         await api.delete(endpoint);
       } catch (error) {
         console.error('Failed to remove item:', error);
@@ -167,27 +182,21 @@ const CartDrawer = () => {
             <div className="text-center text-text-secondary mt-10 font-inter">Your cart is empty. <br/> Time to hit the pitch.</div>
           ) : (
             items.map((item) => {
-              let rawSize = item.size || item.product?.size;
-              
-              let displaySize = rawSize;
-              if (typeof rawSize === 'object' && rawSize !== null) {
-                displaySize = rawSize.size;
-              } else if (typeof rawSize === 'string' && rawSize.startsWith('{')) {
-                try {
-                  displaySize = JSON.parse(rawSize).size;
-                } catch (e) {}
-              }
+              const rawSize = item.size || item.product?.size;
+              const displaySize = parseSize(rawSize);
+              const productName = item.product?.name || item.product?.productName || 'Jersey';
+              const productImage = item.product?.imageUrl || item.product?.productImageUrl || 'https://via.placeholder.com/150';
 
               return (
                 <div key={`${item.product.id}-${displaySize || 'nosize'}`} className="flex gap-4 bg-surface-base p-4 rounded-large border border-white/5">
                   <div className="w-20 h-24 bg-surface-deep rounded-md p-2 flex-shrink-0">
-                    <img src={item.product.imageUrl || 'https://via.placeholder.com/150'} alt={item.product.name} className="w-full h-full object-contain" />
+                    <img src={productImage} alt={productName} className="w-full h-full object-contain" />
                   </div>
                   
                   <div className="flex flex-col justify-between flex-grow">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="kinetic-heading text-sm text-white line-clamp-2 pr-4">{item.product.name}</h3>
+                        <h3 className="kinetic-heading text-sm text-white line-clamp-2 pr-4">{productName}</h3>
                         
                         {displaySize && (
                           <div className="text-xs text-text-secondary mt-1 uppercase font-bold tracking-wider">
@@ -198,7 +207,7 @@ const CartDrawer = () => {
                       </div>
                       
                       <button 
-                        onClick={() => handleRemoveItem(item.product.id, rawSize)}
+                        onClick={() => handleRemoveItem(item.product.id, displaySize)}
                         className="text-text-secondary hover:text-red-400 transition-colors mt-1 shrink-0"
                       >
                         <Trash2 size={16} />
@@ -212,7 +221,7 @@ const CartDrawer = () => {
                       
                       <div className="flex items-center gap-2 bg-surface-high rounded-full border border-white/5 px-1 py-1">
                         <button 
-                          onClick={() => handleQuantityChange(item.product.id, rawSize, item.quantity - 1)}
+                          onClick={() => handleQuantityChange(item.product.id, displaySize, item.quantity - 1)}
                           className="p-1 text-text-secondary hover:text-white transition-colors"
                         >
                           <Minus size={12} />
@@ -221,7 +230,7 @@ const CartDrawer = () => {
                           {item.quantity}
                         </span>
                         <button 
-                          onClick={() => handleQuantityChange(item.product.id, rawSize, item.quantity + 1)}
+                          onClick={() => handleQuantityChange(item.product.id, displaySize, item.quantity + 1)}
                           className="p-1 text-text-secondary hover:text-white transition-colors"
                         >
                           <Plus size={12} />

@@ -5,6 +5,7 @@ import Navbar from './navbar';
 import Footer from './footer';
 import CartDrawer from './cartDrawer';
 import SearchDrawer from './searchdrawer';
+import TrustMarquee from './trustMarquee';
 
 const Layout = () => {
   return (
@@ -15,6 +16,7 @@ const Layout = () => {
       <main className="flex-grow pt-24"> 
         <Outlet />
       </main>
+   
       <Footer />
     </div>
   );

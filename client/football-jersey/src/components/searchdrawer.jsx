@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X, Loader2, ArrowRight } from 'lucide-react';
 import { closeSearch } from '../features/searchSlice';
 import api from '../services/api';
+import { getProductSlug } from '../utils/slugify';
 
 const SearchDrawer = () => {
   const { isOpen } = useSelector(state => state.search);
@@ -58,9 +59,9 @@ const SearchDrawer = () => {
     }
   };
 
-  const handleSuggestionClick = (productId) => {
+  const handleSuggestionClick = (product) => {
     dispatch(closeSearch());
-    navigate(`/product/${productId}`);
+    navigate(`/product/${getProductSlug(product)}`);
   };
 
   if (!isOpen) return null;
@@ -100,7 +101,7 @@ const SearchDrawer = () => {
               {suggestions.map((item) => (
                 <div 
                   key={item.id} 
-                  onClick={() => handleSuggestionClick(item.id)}
+                  onClick={() => handleSuggestionClick(item)}
                   className="flex items-center gap-4 bg-surface-base p-3 rounded-xl border border-transparent hover:border-white/10 cursor-pointer transition-all hover:bg-white/5"
                 >
                   <div className="w-12 h-16 bg-surface-deep rounded flex items-center justify-center p-1 shrink-0">

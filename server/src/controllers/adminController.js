@@ -15,10 +15,7 @@ export const getDashboardStats = async (req, res) => {
 
     const salesByDate = {};
     const recentOrders = await db.select().from(orders).orderBy(desc(orders.createdAt)).limit(30);
-    
-    // Reverse to get chronological order for the chart
     recentOrders.reverse().forEach(order => {
-      // Avoid null dates if any
       if (!order.createdAt) return;
       const dateStr = new Date(order.createdAt).toISOString().split('T')[0];
       if (!salesByDate[dateStr]) {

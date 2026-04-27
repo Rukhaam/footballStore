@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { ShoppingCart, User, Menu, X, ChevronDown, ChevronRight, ArrowLeft, LogOut, Search } from 'lucide-react';
-import { toggleCart } from '../features/cartSlice';
+import { clearLocalCart, toggleCart } from '../features/cartSlice';
 import { toggleSearch } from '../features/searchSlice'; 
 import { logout } from '../features/authSlice';
 import api from '../services/api';
 import { supabase } from '../services/supabaseClient';
+import { slugify } from '../utils/slugify';
 
 const DEFAULT_CATEGORY_IMAGE = 'https://images.unsplash.com/photo-1518605368461-1ee7c532066d?q=80&w=800&auto=format&fit=crop';
 
@@ -43,6 +44,7 @@ useEffect(() => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     dispatch(logout());
+    dispatch(clearLocalCart());
     setIsMobileMenuOpen(false);
     navigate('/');
   };
@@ -94,7 +96,7 @@ useEffect(() => {
                     {categories.map((cat) => (
                       <Link 
                         key={cat.id} 
-                        to={`/category/${cat.id}`} 
+                        to={`/category/${cat.slug || slugify(cat.categoryName)}`} 
                         className="group/card relative h-[250px] w-101 xl:h-[300px] rounded-xl overflow-hidden bg-surface-deep block border border-white/5 shadow-lg"
                       >
                         <img 
@@ -154,7 +156,7 @@ useEffect(() => {
               </div>
             ) : (
               <>
-                <button onClick={() => dispatch(toggleCart())} className="md:hidden relative p-2 text-text-secondary hover:text-white transition-colors">
+                <button onClick={() => dispatch(toggleCart())} className="relative p-2 text-text-secondary hover:text-white transition-colors">
                   <ShoppingCart size={24} />
                   {cartCount > 0 && (
                     <span className="absolute top-0 right-0 w-5 h-5 bg-brand-primary text-surface-base text-xs font-bold rounded-full flex items-center justify-center translate-x-1 -translate-y-1">
@@ -231,7 +233,7 @@ useEffect(() => {
               {categories.map((cat) => (
                 <Link 
                   key={cat.id} 
-                  to={`/category/${cat.id}`} 
+                  to={`/category/${cat.slug || slugify(cat.categoryName)}`} 
                   onClick={closeMobileMenu} 
                   className="flex items-center gap-4 p-3 rounded-xl bg-surface-deep border border-white/5 hover:border-brand-primary/50 transition-all group"
                 >

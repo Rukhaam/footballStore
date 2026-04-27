@@ -102,6 +102,35 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+@keyframes trustMarqueeSlide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.trust-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: trustMarqueeSlide 28s linear infinite;
+}
+
+.trust-marquee-group {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.trust-marquee-wrap:hover .trust-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-marquee-track {
+    animation: none;
+    transform: translateX(0);
+  }
+}
+
 ::selection {
   background-color: #d0ff4d;
   color: black;

@@ -27,7 +27,7 @@ const FacebookIcon = ({ size = 18 }) => (
 
 const Footer = () => {
   return (
-    <footer className="relative bg-[#050505] pt-24 pb-10 px-6 border-t border-white/10 mt-20 overflow-hidden">
+    <footer className="relative bg-[#050505] pt-24 pb-10 px-6 border-t border-white/10 mt-0 overflow-hidden">
       
       {/* Background Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-brand-primary/5 blur-[120px] rounded-full pointer-events-none"></div>
@@ -64,19 +64,19 @@ const Footer = () => {
             <h4 className="font-inter font-bold text-white mb-6 uppercase tracking-[0.2em] text-xs">Shop Gear</h4>
             <ul className="flex flex-col gap-4 font-inter text-sm">
               <li>
-                <Link to="/category/1" className="group flex items-center gap-2 text-text-secondary hover:text-brand-primary transition-all duration-300">
+                <Link to="/category/home-kits" className="group flex items-center gap-2 text-text-secondary hover:text-brand-primary transition-all duration-300">
                   <span className="w-0 h-[1px] bg-brand-primary transition-all duration-300 group-hover:w-4"></span>
                   Club Jerseys
                 </Link>
               </li>
               <li>
-                <Link to="/category/2" className="group flex items-center gap-2 text-text-secondary hover:text-brand-primary transition-all duration-300">
+                <Link to="/category/away-kits" className="group flex items-center gap-2 text-text-secondary hover:text-brand-primary transition-all duration-300">
                   <span className="w-0 h-[1px] bg-brand-primary transition-all duration-300 group-hover:w-4"></span>
                   National Teams
                 </Link>
               </li>
               <li>
-                <Link to="/category/3" className="group flex items-center gap-2 text-text-secondary hover:text-brand-primary transition-all duration-300">
+                <Link to="/category/retro-classics" className="group flex items-center gap-2 text-text-secondary hover:text-brand-primary transition-all duration-300">
                   <span className="w-0 h-[1px] bg-brand-primary transition-all duration-300 group-hover:w-4"></span>
                   Retro Classics
                 </Link>

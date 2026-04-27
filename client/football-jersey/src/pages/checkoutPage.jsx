@@ -21,16 +21,16 @@ const loadRazorpayScript = () => {
 const parseSize = (rawSize) => {
   if (!rawSize) return null;
   if (typeof rawSize === "object" && rawSize !== null) {
-    return rawSize.size;
+    return parseSize(rawSize.size);
   }
   if (typeof rawSize === "string" && rawSize.startsWith("{")) {
     try {
-      return JSON.parse(rawSize).size;
-    } catch (e) {
-      return rawSize; // fallback
+      return parseSize(JSON.parse(rawSize).size);
+    } catch {
+      return rawSize.trim().toUpperCase() || null;
     }
   }
-  return rawSize;
+  return String(rawSize).trim().toUpperCase() || null;
 };
 
 const CheckoutPage = () => {
@@ -39,11 +39,12 @@ const CheckoutPage = () => {
   const { addToast } = useToast();
   
   const { items } = useSelector((state) => state.cart);
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
+  const userEmail = user?.email || user?.user?.email || "";
 
   const [formData, setFormData] = useState({
     fullName: "",
-    email: user?.email || "",
+    email: userEmail,
     phone: "",
     address: "",
     city: "",
@@ -58,6 +59,11 @@ const CheckoutPage = () => {
   const [appliedPromo, setAppliedPromo] = useState(null); 
   const [promoError, setPromoError] = useState(null);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    setFormData((current) => current.email ? current : { ...current, email: userEmail });
+  }, [userEmail]);
 
   // --- MATH & CALCULATIONS ---
   const subtotal = items.reduce(
@@ -177,13 +183,15 @@ const shipping = subtotal > 100 ? 0 : 99.0; // Changed 15.0 to 99.0
       const cleanCartItems = items.map((item) => {
         const rawSize = item.size || item.product?.size;
         const cleanSize = parseSize(rawSize);
+        const productId = item.product?.id || item.productId || item.id;
+        const productName = item.product?.name || item.product?.productName || item.productName || "Jersey";
 
         return {
           quantity: item.quantity,
           priceAtTime: item.priceAtTime,
           product: {
-            id: item.product.id,
-            name: item.product.name,
+            id: productId,
+            name: productName,
             size: cleanSize,
           },
         };
@@ -193,7 +201,6 @@ const shipping = subtotal > 100 ? 0 : 99.0; // Changed 15.0 to 99.0
         customerDetails: sanitizedData, 
         addressSnapshot: addressSnapshot,
         cartItems: cleanCartItems,
-        isGuest: !isAuthenticated,
         promoCode: appliedPromo ? appliedPromo.code : null // SEND PROMO CODE TO BACKEND
       };
 
@@ -235,8 +242,10 @@ const shipping = subtotal > 100 ? 0 : 99.0; // Changed 15.0 to 99.0
             addToast("Payment successful! Welcome to the Kinetic Arena.");
             navigate("/");
           } catch (err) {
-            console.error("Verification failed:", err);
-            addToast("Payment verification failed. Please contact support.");
+            const verifyError = err.response?.data?.error || "Payment verification failed. Please contact support.";
+            console.error("Verification failed:", verifyError);
+            setFormError(`Payment verification failed: ${verifyError}`);
+            addToast(verifyError);
           }
         },
         prefill: {
@@ -256,7 +265,11 @@ const shipping = subtotal > 100 ? 0 : 99.0; // Changed 15.0 to 99.0
         setFormError("Payment failed or was cancelled. Please try again.");
       });
     } catch (error) {
-      const backendError = error.response?.data?.error || "Failed to process order.";
+      const details = error.response?.data?.details;
+      const detailedMessage = Array.isArray(details)
+        ? details.map((item) => item?.message).filter(Boolean).join(" ")
+        : null;
+      const backendError = detailedMessage || error.response?.data?.error || "Failed to process order.";
       console.error("Checkout failed:", backendError);
       setFormError(`Checkout Failed: ${backendError}`);
     } finally {

@@ -27,6 +27,7 @@ ChartJS.register(
 );
 
 const AdminDashboard = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState({ products: 0, orders: 0, users: 0, revenue: 0 });
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);

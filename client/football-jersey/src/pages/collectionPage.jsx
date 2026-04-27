@@ -4,9 +4,21 @@ import { ArrowLeft, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import api from '../services/api';
 import ProductCard from '../components/productCard';
+import { getCollectionSlug } from '../utils/slugify';
+
+const ProductCardSkeleton = () => (
+  <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-surface-low animate-pulse">
+    <div className="h-64 w-full bg-surface-high/70" />
+    <div className="p-4 space-y-3">
+      <div className="h-4 w-3/4 rounded bg-surface-high/80" />
+      <div className="h-3 w-1/2 rounded bg-surface-high/70" />
+      <div className="h-6 w-1/3 rounded bg-surface-high/80" />
+    </div>
+  </div>
+);
 
 const CollectionPage = () => {
-  const { id } = useParams();
+  const { collectionSlug } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams(); // Manage URL params
   
@@ -18,18 +30,18 @@ const CollectionPage = () => {
   const initialPage = parseInt(searchParams.get('page')) || 1;
   const [pagination, setPagination] = useState({ currentPage: initialPage, totalPages: 1, totalItems: 0 });
 
-  // If the collection ID changes, force reset to page 1 in both state and URL
+  // If the collection slug changes, force reset to page 1 in both state and URL
   useEffect(() => {
     setPagination(prev => ({ ...prev, currentPage: 1 }));
     setSearchParams({ page: 1 }, { replace: true });
-  }, [id, setSearchParams]);
+  }, [collectionSlug, setSearchParams]);
 
   useEffect(() => {
     const fetchCollectionData = async () => {
       try {
         setLoading(true);
         // Use the current page from state for the API call
-        const { data } = await api.get(`/store/collections/${id}?page=${pagination.currentPage}&limit=15`);
+        const { data } = await api.get(`/store/collections/${collectionSlug}?page=${pagination.currentPage}&limit=15`);
         
         setCollection(data.collection);
         setProducts(data.products);
@@ -38,6 +50,11 @@ const CollectionPage = () => {
             setPagination(data.pagination);
         } else {
             setPagination(prev => ({ ...prev, totalItems: data.products?.length || 0 }));
+        }
+
+        const canonicalSlug = getCollectionSlug(data.collection);
+        if (canonicalSlug && collectionSlug !== canonicalSlug) {
+          navigate(`/collection/${canonicalSlug}?page=${pagination.currentPage}`, { replace: true });
         }
 
         // Only scroll to top if we actually have data loaded
@@ -50,7 +67,7 @@ const CollectionPage = () => {
     };
 
     fetchCollectionData();
-  }, [id, pagination.currentPage]);
+  }, [collectionSlug, pagination.currentPage, navigate]);
 
   // Pagination Handlers - Update both State and URL
   const handleNextPage = () => {
@@ -71,8 +88,17 @@ const CollectionPage = () => {
 
   if (loading && !collection) {
     return (
-      <div className="flex justify-center items-center min-h-[70vh]">
-        <div className="w-12 h-12 border-4 border-surface-high border-t-brand-primary rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-surface-base pb-24">
+        <div className="max-w-[1400px] mx-auto px-6 mt-16">
+          <div className="mb-10">
+            <div className="h-8 w-72 max-w-full rounded bg-surface-low animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {Array.from({ length: 15 }).map((_, index) => (
+              <ProductCardSkeleton key={`collection-initial-skeleton-${index}`} />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -154,7 +180,13 @@ const CollectionPage = () => {
           </div>
         </div>
 
-        {products.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {Array.from({ length: 15 }).map((_, index) => (
+              <ProductCardSkeleton key={`collection-grid-skeleton-${index}`} />
+            ))}
+          </div>
+        ) : products.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-16 bg-surface-low border border-white/5 rounded-3xl text-center">
             <Shield size={48} className="text-white/20 mb-4" />
             <h3 className="kinetic-heading text-2xl text-white mb-2">No Gear Available Yet</h3>

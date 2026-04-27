@@ -1,7 +1,7 @@
 
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../features/authSlice';
-import cartReducer from '../features/cartSlice';
+import cartReducer, { CART_STORAGE_KEY } from '../features/cartSlice';
 import searchReducer from '../features/searchSlice'
 
 export const store = configureStore({
@@ -10,4 +10,20 @@ export const store = configureStore({
     cart: cartReducer,
     search :searchReducer
   },
+});
+
+let currentCartItems = store.getState().cart.items;
+
+store.subscribe(() => {
+  if (typeof window === 'undefined') return;
+
+  const nextCartItems = store.getState().cart.items;
+  if (nextCartItems === currentCartItems) return;
+
+  currentCartItems = nextCartItems;
+  try {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(nextCartItems));
+  } catch {
+    // Storage can be unavailable in private browsing or embedded previews.
+  }
 });
