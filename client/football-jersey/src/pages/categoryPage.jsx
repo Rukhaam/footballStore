@@ -94,7 +94,7 @@ const CategoryPage = () => {
   }
 
   return (
-    <div className="px-6 pt-12 pb-24 w-full max-w-7xl mx-auto">
+    <div className="px-6 pt-12 pb-24 w-full max-w-7xl mx-auto mt-20">
       
       {/* 2. Added Helmet for Dynamic Category SEO */}
       <Helmet>

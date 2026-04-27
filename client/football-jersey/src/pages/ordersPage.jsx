@@ -30,7 +30,7 @@ const OrdersPage = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12 w-full min-h-[80vh]">
+    <div className="max-w-5xl mx-auto px-6 py-12 w-full min-h-[80vh] mt-20">
       <Link
         to="/"
         className="inline-flex items-center gap-2 text-sm font-inter text-text-secondary hover:text-white transition-colors mb-8 uppercase tracking-widest font-bold"

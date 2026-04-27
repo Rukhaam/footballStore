@@ -135,3 +135,60 @@
   background-color: #d0ff4d;
   color: black;
 }
+/* Add to your src/index.css */
+
+/* Subtle Parallax Effect Class */
+.parallax-bg {
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Cinematic Reveal Animations */
+@keyframes cinematicRevealLeft {
+  0% {
+    opacity: 0;
+    transform: scale(1.1) translateX(-5%);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05) translateX(0);
+  }
+}
+
+@keyframes cinematicRevealRight {
+  0% {
+    opacity: 0;
+    transform: scale(1.1) translateX(5%);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05) translateX(0);
+  }
+}
+
+@keyframes cinematicRevealUp {
+  0% {
+    opacity: 0;
+    transform: scale(1.1) translateY(5%);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05) translateY(0);
+  }
+}
+
+/* Utility classes to trigger animations via Intersection Observer */
+/* Update these utility classes in index.css */
+.animate-reveal-left.is-visible {
+  animation: cinematicRevealLeft 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.animate-reveal-right.is-visible {
+  animation: cinematicRevealRight 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.animate-reveal-up.is-visible {
+  animation: cinematicRevealUp 2.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}

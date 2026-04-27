@@ -83,7 +83,7 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-surface-base flex items-center pt-10 pb-24 px-6">
+    <div className="min-h-[calc(100vh-80px)] bg-surface-base flex items-center pt-10 pb-24 px-6 mt-20">
       <div className="max-w-7xl mx-auto w-full">
         
         {/* Header Section */}

@@ -21,19 +21,37 @@ const Navbar = () => {
   const [categories, setCategories] = useState([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showMobileCategories, setShowMobileCategories] = useState(false); 
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
-  // Pagination implementation for fetching categories
-useEffect(() => {
+  // --- Scroll Listener for Transparent to Blurred Navbar ---
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // --- Fetch Navbar Categories ---
+  useEffect(() => {
     const fetchCategories = async () => {
       try {
         // Fetch page 1 with a limit of 8 (perfect for a 4-column mega menu)
         const res = await api.get('/store/categories?page=1&limit=8');
         
-        // Since the backend now sends { data: [...], pagination: {...} }
-        // We set our state to res.data.data
-        setCategories(res.data.data); 
+        // Safely handle the response structure
+        if (res.data && res.data.data) {
+          setCategories(res.data.data); 
+        } else if (Array.isArray(res.data)) {
+          setCategories(res.data);
+        }
       } catch (err) {
         console.error("Failed to fetch categories", err);
       }
@@ -41,12 +59,17 @@ useEffect(() => {
     fetchCategories();
   }, []);
 
+  // --- Handlers ---
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    dispatch(logout());
-    dispatch(clearLocalCart());
-    setIsMobileMenuOpen(false);
-    navigate('/');
+    try {
+      await supabase.auth.signOut();
+      dispatch(logout());
+      dispatch(clearLocalCart());
+      setIsMobileMenuOpen(false);
+      navigate('/');
+    } catch (err) {
+      console.error("Logout error", err);
+    }
   };
 
   const closeMobileMenu = () => {
@@ -61,7 +84,14 @@ useEffect(() => {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-[60] bg-surface-base/95 backdrop-blur-md ">
+      {/* --- DESKTOP & TOP NAVBAR --- */}
+      <nav 
+        className={`fixed top-0 left-0 right-0 z-[60] transition-all duration-500 ease-in-out ${
+          isScrolled 
+            ? 'bg-[#050505]/95 backdrop-blur-md border-b border-white/5 py-0' 
+            : 'bg-transparent py-2'
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           
           {/* Mobile Menu Button */}
@@ -86,18 +116,18 @@ useEffect(() => {
                 Categories <ChevronDown size={16} className="group-hover:rotate-180 transition-transform duration-300" />
               </button>
               
-              <div className="fixed top-20 w-max bg-surface-base border-b border-white/10 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform -translate-y-2 group-hover:translate-y-0 z-50">
+              <div className="fixed top-20 w-max bg-[#0a0a0a] border-b border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.8)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform -translate-y-2 group-hover:translate-y-0 z-50 rounded-b-3xl">
                 <div className="w-max px-6 lg:px-12 py-12">
                   <div className="flex items-center justify-center mb-8">
                     <h2 className="kinetic-heading text-2xl text-white uppercase tracking-widest">Shop By Category</h2>
-                    <Link to="/" className="text-brand-primary text-sm font-bold uppercase tracking-widest hover:underline ml-4">View All Gear →</Link>
+                    <Link to="/category/all" className="text-brand-primary text-sm font-bold uppercase tracking-widest hover:underline ml-4">View All Gear →</Link>
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
                     {categories.map((cat) => (
                       <Link 
                         key={cat.id} 
                         to={`/category/${cat.slug || slugify(cat.categoryName)}`} 
-                        className="group/card relative h-[250px] w-101 xl:h-[300px] rounded-xl overflow-hidden bg-surface-deep block border border-white/5 shadow-lg"
+                        className="group/card relative h-[250px] w-[200px] xl:w-[250px] xl:h-[300px] rounded-2xl overflow-hidden bg-surface-deep block border border-white/5 shadow-lg"
                       >
                         <img 
                           src={cat.categoryUrl || cat.category_url || DEFAULT_CATEGORY_IMAGE} 
@@ -121,7 +151,7 @@ useEffect(() => {
             </div>
             
             <Link to="/orders" className="text-sm font-inter font-semibold text-text-secondary hover:text-white transition-colors uppercase tracking-widest">
-              orders
+              Orders
             </Link>
             <Link to="/contact" className="text-sm font-inter font-semibold text-text-secondary hover:text-white transition-colors uppercase tracking-widest">
               Contact 
@@ -156,7 +186,7 @@ useEffect(() => {
               </div>
             ) : (
               <>
-                <button onClick={() => dispatch(toggleCart())} className="relative p-2 text-text-secondary hover:text-white transition-colors">
+                <button onClick={() => dispatch(toggleCart())} className="md:hidden relative p-2 text-text-secondary hover:text-white transition-colors">
                   <ShoppingCart size={24} />
                   {cartCount > 0 && (
                     <span className="absolute top-0 right-0 w-5 h-5 bg-brand-primary text-surface-base text-xs font-bold rounded-full flex items-center justify-center translate-x-1 -translate-y-1">
@@ -189,6 +219,7 @@ useEffect(() => {
         <div className="flex-1 overflow-hidden relative">
           <div className={`absolute top-0 left-0 h-full w-[200%] flex transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${showMobileCategories ? '-translate-x-1/2' : 'translate-x-0'}`}>
             
+            {/* Primary Mobile Menu */}
             <div className="w-1/2 h-full p-6 flex flex-col gap-2">
               <Link to="/" onClick={closeMobileMenu} className="flex items-center justify-between py-4 text-xl kinetic-heading text-white border-b border-white/5">
                 Home
@@ -225,11 +256,12 @@ useEffect(() => {
               </div>
             </div>
 
-            <div className="w-1/2 h-full p-4 flex flex-col gap-3 bg-surface-low/30 overflow-y-auto pb-20">
-              <button onClick={() => setShowMobileCategories(false)} className="flex items-center gap-2 py-4 mb-2 text-sm font-inter font-bold text-text-secondary hover:text-white transition-colors uppercase tracking-widest">
+            {/* Mobile Categories Drill-Down */}
+            <div className="w-1/2 h-full p-4 flex flex-col gap-3 bg-[#0a0a0a] overflow-y-auto pb-20">
+              <button onClick={() => setShowMobileCategories(false)} className="flex items-center gap-2 py-4 mb-2 text-sm font-inter font-bold text-text-secondary hover:text-white transition-colors uppercase tracking-widest border-b border-white/5">
                 <ArrowLeft size={18} /> Back
               </button>
-              <h3 className="kinetic-heading text-2xl text-white mb-4 px-2">Shop Gear</h3>
+              <h3 className="kinetic-heading text-2xl text-white mb-4 px-2 mt-4">Shop Gear</h3>
               {categories.map((cat) => (
                 <Link 
                   key={cat.id} 
@@ -237,7 +269,7 @@ useEffect(() => {
                   onClick={closeMobileMenu} 
                   className="flex items-center gap-4 p-3 rounded-xl bg-surface-deep border border-white/5 hover:border-brand-primary/50 transition-all group"
                 >
-                  <div className="w-24 h-16 sm:h-20 rounded-lg overflow-hidden shrink-0 relative">
+                  <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 relative border border-white/5">
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div>
                     <img 
                       src={cat.categoryUrl || cat.category_url || DEFAULT_CATEGORY_IMAGE} 
@@ -246,7 +278,7 @@ useEffect(() => {
                     />
                   </div>
                   <div className="flex-grow">
-                    <h4 className="text-base font-inter font-semibold text-white group-hover:text-brand-primary transition-colors">
+                    <h4 className="text-sm font-inter font-bold text-white group-hover:text-brand-primary transition-colors uppercase tracking-wider">
                       {cat.categoryName}
                     </h4>
                   </div>

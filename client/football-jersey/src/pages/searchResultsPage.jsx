@@ -34,7 +34,7 @@ const SearchResultsPage = () => {
   }, [query]);
 
   return (
-    <div className="min-h-[80vh] bg-surface-base pt-10 pb-24 px-6">
+    <div className="min-h-[80vh] bg-surface-base pt-10 pb-24 px-6 mt-20">
       <div className="max-w-7xl mx-auto w-full">
         
         <div className="mb-12 border-b border-white/10 pb-8">

@@ -13,7 +13,7 @@ const Layout = () => {
       <Navbar />
       <CartDrawer />
       <SearchDrawer></SearchDrawer>
-      <main className="flex-grow pt-24"> 
+      <main className="flex-grow "> 
         <Outlet />
       </main>
    
