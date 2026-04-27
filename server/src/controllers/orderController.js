@@ -280,7 +280,9 @@ export const checkout = async (req, res) => {
         customerPhone: cleanCustomerDetails.phone,
         totalAmount: cleanTotal.toFixed(2),
         addressSnapshot,
-        status: 'pending'
+        status: 'pending',
+        // Assuming your schema handles promo codes this way, otherwise adjust or remove
+        // appliedPromoCode: normalizedPromoCode 
       }).returning();
 
       for (const item of pricedItems) {
@@ -293,12 +295,8 @@ export const checkout = async (req, res) => {
         });
       }
 
-      if (normalizedPromoCode) {
-        await tx
-          .update(promoCodes)
-          .set({ currentUses: sql`${promoCodes.currentUses} + 1` })
-          .where(eq(promoCodes.code, normalizedPromoCode));
-      }
+      // FIX: DO NOT INCREMENT PROMO CODE HERE.
+      // Wait until Razorpay verifies payment in verifyPayment().
 
       return newOrder;
     });
@@ -309,6 +307,7 @@ export const checkout = async (req, res) => {
       receipt: `receipt_order_${newOrder.id}`,
       notes: {
         dbOrderId: String(newOrder.id),
+        promoCode: normalizedPromoCode || 'none' // Pass it to Razorpay so we can retrieve it in verify
       },
     };
 
@@ -374,15 +373,15 @@ export const verifyPayment = async (req, res) => {
     const result = await db.transaction(async (tx) => {
       const [lockedOrder] = await tx
         .update(orders)
-        .set({ status: 'paid' })
+        .set({ status: 'paid' }) // Optimistic default
         .where(and(eq(orders.id, parsedOrderId), eq(orders.status, 'pending')))
         .returning();
 
       if (!lockedOrder) {
         const [currentOrder] = await tx.select().from(orders).where(eq(orders.id, parsedOrderId));
 
-        if (currentOrder?.status === 'paid') {
-          return { alreadyVerified: true };
+        if (currentOrder?.status === 'paid' || currentOrder?.status === 'paid_oversold') {
+          return { alreadyVerified: true, isOversold: currentOrder?.status === 'paid_oversold' };
         }
 
         throw new HttpError(409, `Order cannot be verified from status ${currentOrder?.status || 'unknown'}.`);
@@ -393,7 +392,26 @@ export const verifyPayment = async (req, res) => {
         throw new HttpError(400, 'Order has no items to verify.');
       }
 
-      await decrementInventory(tx, items);
+      // FIX: Payment/Inventory Trap Safety Net
+      let isOversold = false;
+      try {
+        await decrementInventory(tx, items);
+      } catch (invError) {
+        console.error(`Oversold Alert for Order ${parsedOrderId}:`, invError.message);
+        isOversold = true;
+        // The customer HAS paid, but we are out of stock. Mark accordingly.
+        await tx.update(orders)
+          .set({ status: 'paid_oversold' })
+          .where(eq(orders.id, parsedOrderId));
+      }
+
+      // FIX: Increment Promo Code Usage ONLY on successful payment
+      const usedPromoCode = razorpayOrder.notes?.promoCode;
+      if (usedPromoCode && usedPromoCode !== 'none') {
+        await tx.update(promoCodes)
+          .set({ currentUses: sql`${promoCodes.currentUses} + 1` })
+          .where(eq(promoCodes.code, usedPromoCode));
+      }
 
       if (lockedOrder.userId) {
         const userCart = await tx.select().from(cart).where(eq(cart.userId, lockedOrder.userId));
@@ -418,12 +436,15 @@ export const verifyPayment = async (req, res) => {
         });
       }
 
-      return { alreadyVerified: false };
+      return { alreadyVerified: false, isOversold };
     });
 
     return res.status(200).json({
-      message: result.alreadyVerified ? 'Payment already verified' : 'Payment verified successfully',
+      message: result.isOversold 
+        ? 'Payment verified successfully, but some items are currently backordered.' 
+        : 'Payment verified successfully',
       alreadyVerified: result.alreadyVerified,
+      isOversold: result.isOversold
     });
   } catch (error) {
     if (error instanceof HttpError) {
@@ -554,7 +575,7 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ error: 'Invalid order id' });
     }
 
-    const allowedStatuses = new Set(['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled']);
+    const allowedStatuses = new Set(['pending', 'paid', 'paid_oversold', 'processing', 'shipped', 'delivered', 'cancelled']);
     if (!allowedStatuses.has(status)) {
       return res.status(400).json({ error: 'Invalid order status' });
     }
