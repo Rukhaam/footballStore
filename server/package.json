@@ -6,7 +6,6 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "prebuild": "node generate-sitemap.js",
     "start": "node src/index.js",
     "db:generate": "drizzle-kit generate:pg",
     "db:push": "drizzle-kit push:pg",

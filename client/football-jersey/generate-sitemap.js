@@ -1,5 +1,5 @@
-// generate-sitemap.js
 const fs = require('fs');
+const path = require('path'); // Add this line
 
 // IMPORTANT: Replace with your actual live domain and API URL
 const SITE_URL = 'https://www.kineticstore.page'; 
@@ -61,9 +61,9 @@ async function generateSitemap() {
   }).join('')}
 </urlset>`;
 
-    // 5. Write the file to your public folder
-    // When you build your React app, everything in public/ gets served at the root URL
-    fs.writeFileSync('./public/sitemap.xml', sitemap);
+// This guarantees it writes exactly to your public folder
+const targetPath = path.join(__dirname, 'public', 'sitemap.xml');
+fs.writeFileSync(targetPath, sitemap);
     
     console.log('✅ Sitemap successfully generated at public/sitemap.xml');
   } catch (error) {
