@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Block crawlers from protected/private routes
+Disallow: /checkout
+Disallow: /orders
+
+# Tell Google where your sitemap is
+Sitemap: https://kineticstore.page/sitemap.xml

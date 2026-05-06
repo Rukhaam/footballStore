@@ -56,8 +56,6 @@ const CartDrawer = () => {
     };
     
     fetchCart();
-
-    // Cleanup function: Abort if component unmounts or drawer closes
     return () => {
       controller.abort();
     };
