@@ -20,7 +20,9 @@ app.set('trust proxy', 1);
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://kinetic-arena.vercel.app'
+    'https://kinetic-arena.vercel.app',
+    'https://kineticstore.page',
+    'https://www.kineticstore.page'
   ],
   credentials: true
 }));
@@ -50,4 +52,3 @@ app.listen(PORT, () => {
 });
 
 export default app;
-
