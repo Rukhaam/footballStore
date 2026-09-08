@@ -1,4 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { config } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+
+// Resolve the server environment file relative to this module, not the shell's
+// current directory. This supports running the API from either repo root or
+// the server directory.
+config({ path: fileURLToPath(new URL('../../.env', import.meta.url)) });
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
