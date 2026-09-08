@@ -40,7 +40,12 @@ app.use('/api/promo', promoRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running, Database connected' });
 });
-
+app.get("/api/keep-alive", (req, res) => {
+  res.status(200).json({
+    status: "awake",
+    timestamp: new Date().toISOString(),
+  });
+});
 app.get('/api/profile', requireAuth, (req, res) => {
   res.json({ message: 'Protected route', user: req.user });
 });
