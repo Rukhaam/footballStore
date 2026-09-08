@@ -9,8 +9,8 @@ const __dirname = path.dirname(__filename);
 const SITE_URL = 'https://www.kineticstore.page'; 
 
 // Fetch BOTH products and collections for a complete sitemap
-const PRODUCTS_API_URL = 'https://kinetic-backend-bzdmh2b5bqagd0e8.centralindia-01.azurewebsites.net/api/store/jerseys';
-const COLLECTIONS_API_URL = 'https://kinetic-backend-bzdmh2b5bqagd0e8.centralindia-01.azurewebsites.net/api/store/collections';
+const PRODUCTS_API_URL = 'https://footballstore-f2bp.onrender.com/api/store/jerseys';
+const COLLECTIONS_API_URL = 'https://footballstore-f2bp.onrender.com/api/store/collections';
 
 async function generateSitemap() {
   try {
