@@ -23,17 +23,22 @@ export const normalizeCartItem = (item) => {
   const product = item.product || item;
   const productId = getProductId(item);
   const quantity = Number.parseInt(item.quantity, 10);
+  const stock = item.availableQuantity ?? item.stock ?? product.availableQuantity ?? product.stock;
 
   return {
     ...item,
     quantity: Number.isInteger(quantity) && quantity > 0 ? quantity : 1,
     size: parseSize(item.size || item.product?.size),
     priceAtTime: item.priceAtTime ?? product.price ?? item.price ?? 0,
+    stock: typeof stock === 'number' ? stock : (item.stock ?? product.stock),
+    availableQuantity: typeof stock === 'number' ? stock : (item.availableQuantity ?? product.availableQuantity),
     product: {
       ...product,
       id: productId,
       name: product.name || product.productName || item.productName || 'Jersey',
-      imageUrl: product.imageUrl || product.productImageUrl || item.productImageUrl || ''
+      imageUrl: product.imageUrl || product.productImageUrl || item.productImageUrl || '',
+      stock: typeof product.stock === 'number' ? product.stock : (typeof stock === 'number' ? stock : undefined),
+      availableQuantity: typeof product.availableQuantity === 'number' ? product.availableQuantity : (typeof stock === 'number' ? stock : undefined)
     }
   };
 };
@@ -87,6 +92,10 @@ const cartSlice = createSlice({
 
       if (existingItemIndex >= 0) {
         state.items[existingItemIndex].quantity += newItem.quantity;
+        if (typeof newItem.availableQuantity === 'number') {
+          state.items[existingItemIndex].availableQuantity = newItem.availableQuantity;
+          state.items[existingItemIndex].stock = newItem.stock;
+        }
       } else {
         state.items.push({ ...newItem, size: newItemSize });
       }

@@ -1,6 +1,6 @@
 import { db } from '../config/db.js';
 import { users, cart, cartItems, products, productSizes } from '../models/schema.js';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, inArray } from 'drizzle-orm';
 
 class HttpError extends Error {
   constructor(statusCode, message) {
@@ -32,18 +32,22 @@ const normalizeSize = (value) => {
 
 const sizeWhere = (size) => (size ? eq(cartItems.size, size) : isNull(cartItems.size));
 
-const formatCartProduct = (product) => ({
+const formatCartProduct = (product, availableStock) => ({
   id: product.id,
   name: product.productName,
-  imageUrl: product.productImageUrl
+  imageUrl: product.productImageUrl,
+  stock: product.stock,
+  availableQuantity: availableStock ?? product.stock,
 });
 
-const buildGuestCartItem = ({ product, quantity, size }) => ({
+const buildGuestCartItem = ({ product, quantity, size, availableStock }) => ({
   cartItemId: `guest-${product.id}-${size || 'nosize'}`,
   quantity,
   priceAtTime: product.price,
   size,
-  product: formatCartProduct(product)
+  stock: availableStock ?? product.stock,
+  availableQuantity: availableStock ?? product.stock,
+  product: formatCartProduct(product, availableStock)
 });
 
 const getUserCart = async (supabaseId) => {
@@ -135,14 +139,51 @@ export const getCart = async (req, res) => {
       product: {
         id: products.id,
         name: products.productName,
-        imageUrl: products.productImageUrl
+        imageUrl: products.productImageUrl,
+        stock: products.stock,
       }
     })
     .from(cartItems)
     .innerJoin(products, eq(cartItems.productId, products.id))
     .where(eq(cartItems.cartId, currentCart.id));
 
-    res.status(200).json(items);
+    if (!items.length) {
+      return res.status(200).json([]);
+    }
+
+    const productIds = [...new Set(items.map((i) => i.product.id))];
+    const sizeRows = await db
+      .select()
+      .from(productSizes)
+      .where(inArray(productSizes.productId, productIds));
+
+    const enrichedItems = items.map((item) => {
+      const pSizes = sizeRows.filter((s) => s.productId === item.product.id);
+      let availableStock = Number.parseInt(item.product.stock, 10) || 0;
+
+      if (pSizes.length > 0 && item.size) {
+        const normItemSize = normalizeSize(item.size);
+        const match = pSizes.find((s) => normalizeSize(s.size) === normItemSize);
+        if (match) {
+          availableStock = Number.parseInt(match.stock, 10) || 0;
+        } else {
+          availableStock = 0;
+        }
+      }
+
+      return {
+        ...item,
+        stock: availableStock,
+        availableQuantity: availableStock,
+        product: {
+          ...item.product,
+          availableQuantity: availableStock,
+          sizes: pSizes,
+        },
+      };
+    });
+
+    res.status(200).json(enrichedItems);
   } catch (error) {
     return handleCartError(res, error, "Failed to fetch cart");
   }
@@ -159,10 +200,24 @@ export const addToCart = async (req, res) => {
 
     if (!req.user?.supabaseId) {
       await ensureStockIsAvailable({ product, size, quantity });
+
+      const sizeRows = await db
+        .select()
+        .from(productSizes)
+        .where(eq(productSizes.productId, product.id));
+
+      let availableStock = Number.parseInt(product.stock, 10) || 0;
+      if (sizeRows.length > 0 && size) {
+        const match = sizeRows.find((s) => normalizeSize(s.size) === size);
+        if (match) {
+          availableStock = Number.parseInt(match.stock, 10) || 0;
+        }
+      }
+
       return res.status(200).json({
         message: "Added to guest cart",
         guest: true,
-        item: buildGuestCartItem({ product, quantity, size })
+        item: buildGuestCartItem({ product, quantity, size, availableStock }),
       });
     }
 

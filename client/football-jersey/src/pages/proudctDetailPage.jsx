@@ -142,16 +142,22 @@ const ProductDetailsPage = () => {
         await api.post('/cart/add', { productId: product.id, quantity: 1, size: sizeLabel });
       }
   
+      const availableStock = selectedSize?.stock ?? product.stock;
       dispatch(addItemToLocalCart({
         cartItemId: `${isAuthenticated ? 'temp' : 'guest'}-${product.id}-${sizeLabel}`,
         product: {
           id: product.id,
           name: product.productName,
-          imageUrl: product.productImageUrl
+          imageUrl: product.productImageUrl,
+          stock: product.stock,
+          sizes: product.sizes,
+          availableQuantity: availableStock,
         }, 
         quantity: 1,
         size: sizeLabel,
-        priceAtTime: product.price
+        priceAtTime: product.price,
+        stock: availableStock,
+        availableQuantity: availableStock,
       }));
       
       addToast("Gear Added to Cart!", "success");
